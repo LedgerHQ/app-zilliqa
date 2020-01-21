@@ -8,6 +8,7 @@
 #include "txn.pb.h"
 #include "uint256.h"
 #include "bech32_addr.h"
+#include "display_txn.h"
 
 static signTxnContext_t *ctx = &global.signTxnContext;
 
@@ -179,17 +180,6 @@ static unsigned int ui_signHash_compare_button(unsigned int button_mask, unsigne
 	return 0;
 }
 
-// Append msg to ctx->msg for display. THROW if out of memory.
-void append_ctx_msg (const char* msg, int msg_len)
-{
-	if (ctx->msgLen + msg_len >= sizeof(ctx->msg)) {
-		FAIL("Display memory full");
-	}
-	
-	os_memcpy(ctx->msg + ctx->msgLen, msg, msg_len);
-	ctx->msgLen += msg_len;
-}
-
 bool istream_callback (pb_istream_t *stream, pb_byte_t *buf, size_t count)
 {
 	StreamData *sd = stream->state;
@@ -250,6 +240,22 @@ bool istream_callback (pb_istream_t *stream, pb_byte_t *buf, size_t count)
 	return true;
 }
 
+bool decode_txn_data (pb_istream_t *stream, const pb_field_t *field, void **arg)
+{
+	PRINTF("decode_txn_data: data length=%d\n", stream->bytes_left);
+	if (stream->bytes_left > sizeof(ctx->SCMJSON)) {
+		PRINTF("decode_txn_data: Cannot decode txn decode, too large.");
+		// We can't do anything but just consume the data.
+		pb_read(stream, NULL, stream->bytes_left);
+	}
+
+	// Save the message/data part of the transaction for later parsing.
+	ctx->SCMJSONLen = stream->bytes_left;
+	pb_read(stream, (pb_byte_t*) ctx->SCMJSON, ctx->SCMJSONLen);
+
+	return true;
+}
+
 bool decode_callback (pb_istream_t *stream, const pb_field_t *field, void **arg)
 {
 	char buf[PUB_ADDR_BYTES_LEN]; // This is the maximum size required.
@@ -292,7 +298,7 @@ bool decode_callback (pb_istream_t *stream, const pb_field_t *field, void **arg)
 	if (pb_read(stream, (pb_byte_t*) buf, readlen)) {
 		PRINTF("decoded bytes: 0x%.*h\n", readlen, buf);
 		// Write data for display.
-		append_ctx_msg(tagread, strlen(tagread));
+		append_ctx_msg(ctx, tagread, strlen(tagread));
 		if (readlen == PUB_ADDR_BYTES_LEN) {
 			char bech32_buf[76]; // max required for bech32_encode.
 			if (!bech32_addr_encode(bech32_buf, "zil", buf, PUB_ADDR_BYTES_LEN)) {
@@ -301,7 +307,9 @@ bool decode_callback (pb_istream_t *stream, const pb_field_t *field, void **arg)
 			if (strlen(bech32_buf) != BECH32_ADDRSTR_LEN) {
 				FAIL ("bech32 encoded address of incorrect length");
 			}
-			append_ctx_msg(bech32_buf, BECH32_ADDRSTR_LEN);
+			append_ctx_msg(ctx, bech32_buf, BECH32_ADDRSTR_LEN);
+			// Save the toAddr for more smart contract specific processing later on.
+			strcpy(ctx->toAddr,bech32_buf);
 		} else {
 			assert(readlen == ZIL_AMOUNT_GASPRICE_BYTES);
 			// It is either gasprice or amount. a uint128_t value.
@@ -327,12 +335,12 @@ bool decode_callback (pb_istream_t *stream, const pb_field_t *field, void **arg)
 				qa_to_zil(qabuf, dispbuf, sizeof(dispbuf));
 				PRINTF("Qa converted to Zil: %s\n", dispbuf);
 				strcpy(qabuf, dispbuf);
-				append_ctx_msg(qabuf, strlen(qabuf));
+				append_ctx_msg(ctx, qabuf, strlen(qabuf));
 			} else {
 				FAIL("Error converting 128b unsigned to decimal");
 			}
 		}
-		append_ctx_msg(" ", 1);
+		append_ctx_msg(ctx, " ", 1);
 		PRINTF("pb_read: read %d bytes\n", readlen);
 	} else {
 		PRINTF("pb_read failed\n");
@@ -353,8 +361,10 @@ bool sign_deserialize_stream(uint8_t *txn1, int txn1Len, int hostBytesLeft)
   // Setup the stream.
 	pb_istream_t stream = { istream_callback, &ctx->sd, hostBytesLeft + txn1Len, NULL };
 
-	// Initialize the display message.
+	// Initialize the display message and message JSON buffer.
 	ctx->msgLen = 0;
+	ctx->SCMJSONLen = 0;
+
 	// Initialize schnorr signing, continue with what we have so far.
 	deriveAndSignInit(&ctx->ecs, ctx->keyIndex);
 	deriveAndSignContinue(&ctx->ecs, txn1, txn1Len);
@@ -369,6 +379,9 @@ bool sign_deserialize_stream(uint8_t *txn1, int txn1Len, int hostBytesLeft)
 	txn.amount.data.arg = ProtoTransactionCoreInfo_amount_tag;
 	txn.gasprice.data.funcs.decode = decode_callback;
 	txn.gasprice.data.arg = ProtoTransactionCoreInfo_gasprice_tag;
+	// Set a decoder for the data field of our transaction.
+	txn.data.funcs.decode = decode_txn_data;
+
 	// Start decoding (and signing).
 	if (pb_decode(&stream, ProtoTransactionCoreInfo_fields, &txn)) {
 		PRINTF ("pb_decode successful\n");
@@ -378,6 +391,9 @@ bool sign_deserialize_stream(uint8_t *txn1, int txn1Len, int hostBytesLeft)
 		PRINTF ("pb_decode failed\n");
 		return false;
 	}
+
+	// If this is a known smart contract transition, print more details.
+	display_sc_message(ctx);
 
 	return true;
 }

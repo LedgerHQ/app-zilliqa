@@ -40,10 +40,16 @@ typedef struct {
 	zil_ecschnorr_t ecs;
 	uint8_t signature[SCHNORR_SIG_LEN_RS];
   StreamData sd;
+	char toAddr[BECH32_ADDRSTR_LEN+1];
 
 	// Used for display
 	uint8_t msg[512];
 	unsigned int msgLen;
+
+	// Buffer for the smart contract message JSON.
+	uint8_t SCMJSON[256];
+	int SCMJSONLen;
+
 	uint32_t displayIndex;
 	uint8_t indexStr[40]; // variable-length
 	uint8_t partialMsg[13];
