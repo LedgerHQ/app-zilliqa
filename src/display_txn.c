@@ -18,13 +18,22 @@
 
 #include <os.h>
 
-// jsmn.h can be included only once in the entire source.
-// If need in multiple places, see the GitHub page for instructions.
-#include "jsmn.h"
-
+// zilliqa.h must be included before txn_msg.h so as to define PRINTF and FAIL.
+#include "zilliqa.h"
+#include "txn_msg.h"
 #include "display_txn.h"
+#include "bech32_addr.h"
 
-const char *knownContracts[] =
+int (*bech32_addr_encode_ptr) (
+    char *output,
+    const char *hrp,
+    const uint8_t *prog,
+    size_t prog_len
+) = bech32_addr_encode;
+
+void (*hex2bin_ptr)(const uint8_t *hexstr, unsigned numhexchars, uint8_t *bin) = hex2bin;
+
+const char* knownContracts[] =
 	{
 		"zil1pel8hjums9yxuunv75frartsjtudz72ymeq707"
 	};
@@ -33,7 +42,9 @@ bool isKnownAddr(const char* addr) {
 
 	return true;
 
-	for (int i = 0; i < sizeof(knownContracts); i++) {
+	#define n_array(x) (sizeof (x) / sizeof (const char *))
+
+	for (unsigned i = 0; i < n_array(knownContracts); i++) {
 		if (!strcmp(addr, knownContracts[i]))
 			return true;
 	}
@@ -56,6 +67,20 @@ void append_ctx_msg (signTxnContext_t *ctx, const char* msg, int msg_len)
 void display_sc_message(signTxnContext_t *ctx)
 {
 	// Is this a pre-known smart contract transaction?
-	if (!isKnownAddr(ctx->toAddr))
+	if (!isKnownAddr(ctx->toAddr) || ctx->SCMJSONLen == 0) {
+		PRINTF("Not a known smart contract or couldn't parse txn data.\n");
 		return;
+	}
+
+	PRINTF("Known smart contract, attempting to parse txn data and print details.\n");
+
+	int msg_rem = sizeof(ctx->msg) - ctx->msgLen;
+	// Parse the JSON in ctx->SCMJSON and print it in ctx->msg.
+	int num_json_chars = process_json
+		((const char*) ctx->SCMJSON, ctx->SCMJSONLen, ctx->msg + ctx->msgLen, msg_rem);
+	if (num_json_chars < 0) {
+		PRINTF("Writing smart contract txn message details failed\n");
+		return;
+	}
+	ctx->msgLen += num_json_chars;
 }

@@ -184,7 +184,7 @@ static uint8_t hexchar2bin (unsigned char c) {
 // Given a hex string with numhexchar characters, convert it
 // to byte sequence and place in "bin" (which must be allocated
 // with at least numhexchar/2 bytes already).
-void hex2bin(uint8_t *hexstr, unsigned numhexchars, uint8_t *bin) {
+void hex2bin(const uint8_t *hexstr, unsigned numhexchars, uint8_t *bin) {
     if (numhexchars % 2 != 0 || numhexchars == 0)
         THROW(SW_INVALID_PARAM);
 

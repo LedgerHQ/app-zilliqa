@@ -92,7 +92,7 @@ int bin64b2dec(uint8_t *dst, uint32_t dst_len, uint64_t n);
 // Given a hex string with numhexchar characters, convert it
 // to byte sequence and place in "bin" (which must be allocated
 // with at least numhexchar/2 bytes already).
-void hex2bin(uint8_t *hexstr, unsigned numhexchars, uint8_t *bin);
+void hex2bin(const uint8_t *hexstr, unsigned numhexchars, uint8_t *bin);
 
 
 #endif

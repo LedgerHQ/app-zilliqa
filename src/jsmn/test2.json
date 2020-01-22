@@ -1,0 +1,15 @@
+{
+  "params": [
+    {
+      "vname": "spender",
+      "type": "ByStr20",
+      "value": "0x9bfec715a6bd658fcb62b0f8cc9bfa2ade71434a"
+    },
+    {
+      "vname": "tokens",
+      "type": "Uint128",
+      "value": "500"
+    }
+  ],
+  "_tag": "Approve"
+}

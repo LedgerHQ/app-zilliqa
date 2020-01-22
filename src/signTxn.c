@@ -244,13 +244,14 @@ bool decode_txn_data (pb_istream_t *stream, const pb_field_t *field, void **arg)
 {
 	PRINTF("decode_txn_data: data length=%d\n", stream->bytes_left);
 	if (stream->bytes_left > sizeof(ctx->SCMJSON)) {
-		PRINTF("decode_txn_data: Cannot decode txn decode, too large.");
+		PRINTF("decode_txn_data: Cannot decode txn decode, too large.\n");
 		// We can't do anything but just consume the data.
 		pb_read(stream, NULL, stream->bytes_left);
 	}
 
 	// Save the message/data part of the transaction for later parsing.
 	ctx->SCMJSONLen = stream->bytes_left;
+	PRINTF("decode_txn_data: Saving %d bytes for later parse.\n", ctx->SCMJSONLen);
 	pb_read(stream, (pb_byte_t*) ctx->SCMJSON, ctx->SCMJSONLen);
 
 	return true;
@@ -376,9 +377,9 @@ bool sign_deserialize_stream(uint8_t *txn1, int txn1Len, int hostBytesLeft)
 	// Since we're using the same callback for amount and gasprice,
 	// but the tag for both will be set to "ByteArray", we differentiate with "arg".
 	txn.amount.data.funcs.decode = decode_callback;
-	txn.amount.data.arg = ProtoTransactionCoreInfo_amount_tag;
+	txn.amount.data.arg = (void*)ProtoTransactionCoreInfo_amount_tag;
 	txn.gasprice.data.funcs.decode = decode_callback;
-	txn.gasprice.data.arg = ProtoTransactionCoreInfo_gasprice_tag;
+	txn.gasprice.data.arg = (void*)ProtoTransactionCoreInfo_gasprice_tag;
 	// Set a decoder for the data field of our transaction.
 	txn.data.funcs.decode = decode_txn_data;
 
