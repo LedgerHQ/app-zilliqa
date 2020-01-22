@@ -366,6 +366,10 @@ bool sign_deserialize_stream(uint8_t *txn1, int txn1Len, int hostBytesLeft)
 	ctx->msgLen = 0;
 	ctx->SCMJSONLen = 0;
 
+#ifdef HAVE_BOLOS_APP_STACK_CANARY
+	CHECK_CANARY
+#endif // HAVE_BOLOS_APP_STACK_CANARY
+
 	// Initialize schnorr signing, continue with what we have so far.
 	deriveAndSignInit(&ctx->ecs, ctx->keyIndex);
 	deriveAndSignContinue(&ctx->ecs, txn1, txn1Len);
