@@ -383,6 +383,10 @@ bool sign_deserialize_stream(uint8_t *txn1, int txn1Len, int hostBytesLeft)
 	// Set a decoder for the data field of our transaction.
 	txn.data.funcs.decode = decode_txn_data;
 
+#ifdef HAVE_BOLOS_APP_STACK_CANARY
+	CHECK_CANARY
+#endif // HAVE_BOLOS_APP_STACK_CANARY
+
 	// Start decoding (and signing).
 	if (pb_decode(&stream, ProtoTransactionCoreInfo_fields, &txn)) {
 		PRINTF ("pb_decode successful\n");
@@ -393,6 +397,10 @@ bool sign_deserialize_stream(uint8_t *txn1, int txn1Len, int hostBytesLeft)
 		return false;
 	}
 
+#ifdef HAVE_BOLOS_APP_STACK_CANARY
+	CHECK_CANARY
+#endif // HAVE_BOLOS_APP_STACK_CANARY
+
 	// If this is a known smart contract transition, print more details.
 	display_sc_message(ctx);
 
@@ -400,6 +408,11 @@ bool sign_deserialize_stream(uint8_t *txn1, int txn1Len, int hostBytesLeft)
 }
 
 void handleSignTxn(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t dataLength, volatile unsigned int *flags, volatile unsigned int *tx) {
+
+#ifdef HAVE_BOLOS_APP_STACK_CANARY
+	INIT_CANARY
+#endif // HAVE_BOLOS_APP_STACK_CANARY
+
 	int dataIndexOffset = 0;      // offset for the key index to use
 	int dataHostBytesLeftOffset = 4; // offset for integer: is there more data (do io_exhange again)?
 	int dataTxnLenOffset = 8;     // offset for integer containing length of current txn

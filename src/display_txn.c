@@ -77,10 +77,15 @@ void display_sc_message(signTxnContext_t *ctx)
 	int msg_rem = sizeof(ctx->msg) - ctx->msgLen;
 	// Parse the JSON in ctx->SCMJSON and print it in ctx->msg.
 	int num_json_chars = process_json
-		((const char*) ctx->SCMJSON, ctx->SCMJSONLen, ctx->msg + ctx->msgLen, msg_rem);
+		((const char*) ctx->SCMJSON, ctx->SCMJSONLen, (char*) ctx->msg + ctx->msgLen, msg_rem);
 	if (num_json_chars < 0) {
 		PRINTF("Writing smart contract txn message details failed\n");
 		return;
 	}
 	ctx->msgLen += num_json_chars;
+
+#ifdef HAVE_BOLOS_APP_STACK_CANARY
+	CHECK_CANARY
+#endif // HAVE_BOLOS_APP_STACK_CANARY
+
 }

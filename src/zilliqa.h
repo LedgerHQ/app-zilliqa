@@ -29,6 +29,24 @@
         THROW(EXCEPTION); \
     }
 
+#ifdef HAVE_BOLOS_APP_STACK_CANARY
+// This symbol is defined by the link script to be at the start of the stack
+// area.
+extern unsigned long _stack;
+#define STACK_CANARY (*((volatile uint32_t*) &_stack))
+
+#define INIT_CANARY          \
+  STACK_CANARY = 0xDEADBEEF; \
+  PRINTF("init_canary: initialized\n");
+
+#define CHECK_CANARY                          \
+  if (STACK_CANARY != 0xDEADBEEF)           \
+    FAIL("check_canary: EXCEPTION_OVERFLOW"); \
+  PRINTF("check_canary: successfull\n");
+
+#endif // HAVE_BOLOS_APP_STACK_CANARY
+
+
 // Constants
 #define SHA256_HASH_LEN 32
 #define PUB_ADDR_BYTES_LEN 20

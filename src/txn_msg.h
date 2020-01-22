@@ -169,6 +169,11 @@ static int print_scilla_value_object(const char *json, Tokens *tokens, int objec
     num_chars_value = BECH32_ADDRSTR_LEN;
     value_start = value_buf;
   }
+
+#ifdef HAVE_BOLOS_APP_STACK_CANARY
+	CHECK_CANARY
+#endif // HAVE_BOLOS_APP_STACK_CANARY
+
 #endif
 
   const char *sep = ":";
