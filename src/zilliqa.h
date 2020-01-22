@@ -94,12 +94,5 @@ int bin64b2dec(uint8_t *dst, uint32_t dst_len, uint64_t n);
 // with at least numhexchar/2 bytes already).
 void hex2bin(uint8_t *hexstr, unsigned numhexchars, uint8_t *bin);
 
-// Equivalent to what is there in stdlib.
-int strncmp( const char * s1, const char * s2, size_t n );
-// Equivalent to what is there in stdlib.
-size_t strlen(const char *str);
-// Equivalent to what is there in stdlib.
-char* strcpy(char *dst, const char *src);
-
 
 #endif
