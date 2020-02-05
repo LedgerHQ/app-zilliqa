@@ -4,9 +4,11 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "../txn_json_decode.h"
+#define JSMN_HEADER
+#include "txn_json_decode.h"
 
 #define MAX_BUF_LEN 512
+static Tokens tokens;
 
 int main(int argc, char* argv[])
 {
@@ -30,7 +32,7 @@ int main(int argc, char* argv[])
 
   char output[MAX_BUF_LEN];
   int output_len;
-  if ((output_len = process_json(buf, bufLen, output, MAX_BUF_LEN)) < 0) {
+  if ((output_len = process_json(&tokens, buf, bufLen, output, MAX_BUF_LEN)) < 0) {
     fprintf(stderr, "Error processing JSON %s\n", argv[1]);
     return 1;
   }

@@ -393,23 +393,22 @@ static bool sign_deserialize_stream(const uint8_t *txn1, int txn1Len, int hostBy
 	CHECK_CANARY;
 
 	// Initialize protobuf Txn structs.
-	static ProtoTransactionCoreInfo txn;
-	os_memset(&txn, 0, sizeof(txn));
+	os_memset(&ctx->U.txn, 0, sizeof(ctx->U.txn));
 	// Set callbacks for handling the fields that what we need.
-	txn.toaddr.funcs.decode = decode_callback;
+	ctx->U.txn.toaddr.funcs.decode = decode_callback;
 	// Since we're using the same callback for amount and gasprice,
 	// but the tag for both will be set to "ByteArray", we differentiate with "arg".
-	txn.amount.data.funcs.decode = decode_callback;
-	txn.amount.data.arg = (void*)ProtoTransactionCoreInfo_amount_tag;
-	txn.gasprice.data.funcs.decode = decode_callback;
-	txn.gasprice.data.arg = (void*)ProtoTransactionCoreInfo_gasprice_tag;
+	ctx->U.txn.amount.data.funcs.decode = decode_callback;
+	ctx->U.txn.amount.data.arg = (void*)ProtoTransactionCoreInfo_amount_tag;
+	ctx->U.txn.gasprice.data.funcs.decode = decode_callback;
+	ctx->U.txn.gasprice.data.arg = (void*)ProtoTransactionCoreInfo_gasprice_tag;
 	// Set a decoder for the data field of our transaction.
-	txn.data.funcs.decode = decode_txn_data;
+	ctx->U.txn.data.funcs.decode = decode_txn_data;
 
 	CHECK_CANARY;
 
 	// Start decoding (and signing).
-	if (pb_decode(&stream, ProtoTransactionCoreInfo_fields, &txn)) {
+	if (pb_decode(&stream, ProtoTransactionCoreInfo_fields, &ctx->U.txn)) {
 		PRINTF ("pb_decode successful\n");
 		deriveAndSignFinish(&ctx->ecs, ctx->keyIndex, ctx->signature, SCHNORR_SIG_LEN_RS);
 		PRINTF ("sign_deserialize_stream: signature: 0x%.*h\n", SCHNORR_SIG_LEN_RS, ctx->signature);
@@ -425,7 +424,7 @@ static bool sign_deserialize_stream(const uint8_t *txn1, int txn1Len, int hostBy
 		int msg_rem = sizeof(ctx->msg) - ctx->msgLen;
 		// Parse the JSON in ctx->SCMJSON and print it in ctx->msg.
 		int num_json_chars = process_json
-			((const char*) ctx->SCMJSON, ctx->SCMJSONLen, (char*) ctx->msg + ctx->msgLen, msg_rem);
+			(&(ctx->U.tokens), (const char*) ctx->SCMJSON, ctx->SCMJSONLen, (char*) ctx->msg + ctx->msgLen, msg_rem);
 		if (num_json_chars < 0) {
 			PRINTF("Writing smart contract txn message details failed\n");
 		}

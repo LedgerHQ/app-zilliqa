@@ -9,11 +9,6 @@ size_t strlen(const char *str);
 char *strcat(char *dest, const char *src);
 char *strncat(char *dest, const char *src, size_t n);
 
-#define MAX_NUM_TOKENS 24
-
-#define JSMN_STATIC
-#include "jsmn.h"
-
 static bool json_string_eq(const char *json, jsmntok_t *tok, const char *s) {
   if (tok->type == JSMN_STRING && (int)strlen(s) == tok->end - tok->start &&
       strncmp(json + tok->start, s, tok->end - tok->start) == 0) {
@@ -21,12 +16,6 @@ static bool json_string_eq(const char *json, jsmntok_t *tok, const char *s) {
   }
   return false;
 }
-
-typedef struct
-{
-  jsmntok_t tokens[MAX_NUM_TOKENS];
-  int total_tokens;
-} Tokens;
 
 static jsmntok_t *access (Tokens *tokens, int idx)
 {
@@ -179,15 +168,14 @@ static int print_scilla_value_object(const char *json, Tokens *tokens, int objec
 
 // Parse and print interesting data in JSON.
 // Returns number of chars written to output, negative on failure.
-int process_json(const char buf[], int bufLen, char *output, int output_size)
+int process_json(Tokens *tokens, const char jsonBuf[], int jsonBufLen, char *output, int output_size)
 {
   CHECK_CANARY;
 
   jsmn_parser p;
 
   jsmn_init(&p);
-  Tokens tokens;
-  tokens.total_tokens = jsmn_parse(&p, buf, bufLen, tokens.tokens, MAX_NUM_TOKENS);
+  tokens->total_tokens = jsmn_parse(&p, jsonBuf, jsonBufLen, tokens->tokens, MAX_NUM_TOKENS);
 
   CHECK_CANARY;
 
@@ -213,13 +201,13 @@ int process_json(const char buf[], int bufLen, char *output, int output_size)
 
   CHECK_CANARY;
 
-  if (tokens.total_tokens < 1) {
+  if (tokens->total_tokens < 1) {
     PRINTF("Empty JSON");
     return -1;
   }
 
   // Find the key "params" in the outer Object.
-  int params_idx = find_key_in_object(buf, &tokens, 0, "params");
+  int params_idx = find_key_in_object(jsonBuf, tokens, 0, "params");
   if (params_idx < 0) {
     PRINTF ("Could not find \"params\" in JSON\n");
     return -1;
@@ -228,7 +216,7 @@ int process_json(const char buf[], int bufLen, char *output, int output_size)
   CHECK_CANARY;
 
   // If "params" value is not an array, it's malformed.
-  if (access(&tokens, params_idx)->type != JSMN_ARRAY) {
+  if (access(tokens, params_idx)->type != JSMN_ARRAY) {
     PRINTF ("Expected \"params\" to be a JSON array\n");
     return -1;
   }
@@ -238,13 +226,13 @@ int process_json(const char buf[], int bufLen, char *output, int output_size)
   // Print all params.
   int param_idx = params_idx + 1;
   int num_chars_total = 0;
-  for (int child = 0; child < access(&tokens, params_idx)->size; child++) {
-    if (access(&tokens, param_idx)->type != JSMN_OBJECT) {
+  for (int child = 0; child < access(tokens, params_idx)->size; child++) {
+    if (access(tokens, param_idx)->type != JSMN_OBJECT) {
       PRINTF("Expected Object item in \"params\" array.\n");
       return -1;
     }
 
-    int num_chars = print_scilla_value_object(buf, &tokens, param_idx, output, output_size);
+    int num_chars = print_scilla_value_object(jsonBuf, tokens, param_idx, output, output_size);
     if (num_chars < 0)
       return num_chars;
 
@@ -260,7 +248,7 @@ int process_json(const char buf[], int bufLen, char *output, int output_size)
       output_size--;
     }
     
-    param_idx = next_token(&tokens, param_idx);
+    param_idx = next_token(tokens, param_idx);
   }
 
   CHECK_CANARY;

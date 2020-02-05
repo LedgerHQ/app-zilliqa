@@ -3,6 +3,10 @@
 
 #include "schnorr.h"
 #include "zilliqa.h"
+#include "txn.pb.h"
+
+#define JSMN_HEADER
+#include "txn_json_decode.h"
 
 #define TXN_BUF_SIZE 256
 
@@ -49,6 +53,10 @@ typedef struct {
 	// Buffer for the smart contract message JSON.
 	uint8_t SCMJSON[192];
 	int SCMJSONLen;
+	union {
+		ProtoTransactionCoreInfo txn;
+		Tokens tokens;
+	} U;
 
 	uint32_t displayIndex;
 	uint8_t indexStr[40]; // variable-length
@@ -93,5 +101,7 @@ void ui_idle(void);
 // io_exchange with the IO_RETURN_AFTER_TX flag. tx is the current offset
 // within G_io_apdu_buffer (before the code is appended).
 void io_exchange_with_code(uint16_t code, uint16_t tx);
+
+#undef JSMN_HEADER
 
 #endif
