@@ -4,19 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define BECH32_ADDRSTR_LEN (3 + 1 + 32 + 6)
-#define PUB_ADDR_BYTES_LEN 20
-
-#include "../txn_msg.h"
-
-int (*bech32_addr_encode_ptr) (
-    char *output,
-    const char *hrp,
-    const uint8_t *prog,
-    size_t prog_len
-) = NULL;
-
-void (*hex2bin_ptr)(const uint8_t *hexstr, unsigned numhexchars, uint8_t *bin) = NULL;
+#include "../txn_json_decode.h"
 
 #define MAX_BUF_LEN 512
 

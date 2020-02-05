@@ -248,6 +248,7 @@ static void zil_main(void) {
 				if (!handlerFn) {
 					THROW(0x6D00);
 				}
+				INIT_CANARY;
 				handlerFn(G_io_apdu_buffer[OFFSET_P1], G_io_apdu_buffer[OFFSET_P2],
 				          G_io_apdu_buffer + OFFSET_CDATA, G_io_apdu_buffer[OFFSET_LC], &flags, &tx);
 			}

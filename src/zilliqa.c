@@ -93,11 +93,16 @@ void deriveAndSignInit(zil_ecschnorr_t *T, uint32_t index)
     PRINTF("deriveAndSignInit: index: %d\n", index);
 
     uint8_t keySeed[KEY_SEED_LEN];
+
+    CHECK_CANARY;
     getKeySeed(keySeed, index);
     cx_ecfp_private_key_t privateKey;
     cx_ecfp_init_private_key(CX_CURVE_SECP256K1, keySeed, 32, &privateKey);
     PRINTF("deriveAndSignInit: privateKey: %.*H \n", privateKey.d_len, privateKey.d);
+
+    CHECK_CANARY;
     zil_ecschnorr_sign_init (T, &privateKey);
+	CHECK_CANARY;
 
     // Erase private keys for better security.
     os_memset(keySeed, 0, sizeof(keySeed));
@@ -108,7 +113,9 @@ void deriveAndSignContinue(zil_ecschnorr_t *T, const uint8_t *msg, unsigned int 
 {
     PRINTF("deriveAndSignContinue: msg: %.*H \n", msg_len, msg);
 
+    CHECK_CANARY;
     zil_ecschnorr_sign_continue(T, msg, msg_len);
+    CHECK_CANARY;
 }
 
 int deriveAndSignFinish(zil_ecschnorr_t *T, uint32_t index, unsigned char *dst, unsigned int dst_len)
@@ -116,6 +123,8 @@ int deriveAndSignFinish(zil_ecschnorr_t *T, uint32_t index, unsigned char *dst, 
     PRINTF("deriveAndSignFinish: index: %d\n", index);
 
     uint8_t keySeed[KEY_SEED_LEN];
+
+    CHECK_CANARY;
     getKeySeed(keySeed, index);
     cx_ecfp_private_key_t privateKey;
     cx_ecfp_init_private_key(CX_CURVE_SECP256K1, keySeed, 32, &privateKey);
@@ -124,12 +133,14 @@ int deriveAndSignFinish(zil_ecschnorr_t *T, uint32_t index, unsigned char *dst, 
     if (dst_len != SCHNORR_SIG_LEN_RS)
         THROW (INVALID_PARAMETER);
 
+    CHECK_CANARY;
     uint32_t s = zil_ecschnorr_sign_finish(T, &privateKey, dst, dst_len);
     PRINTF("deriveAndSignFinish: signature: %.*H\n", SCHNORR_SIG_LEN_RS, dst);
 
     // Erase private keys for better security.
     os_memset(keySeed, 0, sizeof(keySeed));
     os_memset(&privateKey, 0, sizeof(privateKey));
+    CHECK_CANARY;
 
     return s;
 }
@@ -309,11 +320,14 @@ void qa_to_zil(const char* qa, char* zil_buf, int zil_buf_len)
   assert(zil_buf_len >= ZIL_UINT128_BUF_LEN && qa_len < ZIL_UINT128_BUF_LEN);
 
   char qa_buf[ZIL_UINT128_BUF_LEN];
+
+  CHECK_CANARY;
   strcpy(qa_buf, qa);
   /* Cleanse the input. */
   cleanse_input(qa_buf);
   /* Convert Qa to Zil. */
   ToZil(qa_buf, zil_buf, QA_ZIL_SHIFT);
+  CHECK_CANARY;
 }
 
 void qa_to_li(const char* qa, char* li_buf, int li_buf_len)
@@ -322,9 +336,22 @@ void qa_to_li(const char* qa, char* li_buf, int li_buf_len)
   assert(li_buf_len >= ZIL_UINT128_BUF_LEN && qa_len < ZIL_UINT128_BUF_LEN);
 
   char qa_buf[ZIL_UINT128_BUF_LEN];
+
+  CHECK_CANARY;
+
   strcpy(qa_buf, qa);
   /* Cleanse the input. */
   cleanse_input(qa_buf);
   /* Convert Qa to Li. */
   ToZil(qa_buf, li_buf, QA_LI_SHIFT);
+
+  CHECK_CANARY;
 }
+
+void print_available_stack()
+{
+    uint32_t stack_top = 0;
+    PRINTF("Stack remaining: CUR_STACK_ADDR: 0x%p, STACK_LIMIT: 0x%p, Available: %d\n", 
+        &stack_top, &_stack, ((uintptr_t)&stack_top) - ((uintptr_t)&_stack));
+}
+

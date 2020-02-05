@@ -2,42 +2,16 @@
 #include <stddef.h>
 #include <string.h>
 
+#include "txn_json_decode.h"
 
 int strncmp( const char * s1, const char * s2, size_t n );
 size_t strlen(const char *str);
 char *strcat(char *dest, const char *src);
 char *strncat(char *dest, const char *src, size_t n);
 
-#define MAX_NUM_TOKENS 32
+#define MAX_NUM_TOKENS 24
 
-#ifndef MAX
-#define MAX(X, Y) (X) > (Y) ? (X) : (Y)
-#endif // MAX
-#ifndef MIN
-#define MIN(X, Y) (X) < (Y) ? (X) : (Y)
-#endif // MIN
-
-#ifndef PRINTF
-#include "stdio.h"
-#define PRINTF(...) fprintf(stderr, __VA_ARGS__)
-#endif // PRINTF
-
-#ifndef FAIL
-#include <stdlib.h>
-#define FAIL(...) PRINTF(__VA_ARGS__); abort()
-#endif // FAIL
-
-// If bech32_addr_encode and hex2bin are available, use them to
-// bech32 encode a ByStr20 value, otherwise, just display hex string.
-extern int (*bech32_addr_encode_ptr) (
-    char *output,
-    const char *hrp,
-    const uint8_t *prog,
-    size_t prog_len
-);
-extern void (*hex2bin_ptr)(const uint8_t *hexstr, unsigned numhexchars, uint8_t *bin);
-
-#define JSMN_HEADER
+#define JSMN_STATIC
 #include "jsmn.h"
 
 static bool json_string_eq(const char *json, jsmntok_t *tok, const char *s) {
@@ -152,27 +126,37 @@ static int print_scilla_value_object(const char *json, Tokens *tokens, int objec
   int num_chars_value = access(tokens, value_idx)->end - access(tokens, value_idx)->start;
   const char *value_start = json + access(tokens, value_idx)->start;
 
-#if 0
+#ifdef JSON_BECH32_ADDR
+
+  void hex2bin(const uint8_t *hexstr, unsigned numhexchars, uint8_t *bin);
+  int bech32_addr_encode(
+    char *output,
+    const char *hrp,
+    const uint8_t *prog,
+    size_t prog_len
+  );
+
+  CHECK_CANARY;
+
   bool is_addr = json_string_eq(json, access(tokens, type_idx), "ByStr20");
 
   // If address value, attempt bech32 conversion.
   char value_buf[76]; // max required for bech32_encode.
-  if (is_addr && num_chars_value == 42 &&
-      bech32_addr_encode_ptr && hex2bin_ptr)
+  if (is_addr && num_chars_value == 42)
   {
     PRINTF("Converting address in txn data JSON to bech32\n");
     unsigned char buf[20];
-    hex2bin_ptr((uint8_t *) json + access(tokens, value_idx)->start, num_chars_value, buf);
-    if (!bech32_addr_encode_ptr(value_buf, "zil", buf, PUB_ADDR_BYTES_LEN)) {
+    hex2bin((uint8_t *) json + access(tokens, value_idx)->start, num_chars_value, buf);
+    CHECK_CANARY;
+    if (!bech32_addr_encode(value_buf, "zil", buf, PUB_ADDR_BYTES_LEN)) {
+      CHECK_CANARY;
       FAIL ("bech32 encoding of address failed\n");
     }
     num_chars_value = BECH32_ADDRSTR_LEN;
     value_start = value_buf;
   }
 
-#ifdef HAVE_BOLOS_APP_STACK_CANARY
-	CHECK_CANARY
-#endif // HAVE_BOLOS_APP_STACK_CANARY
+	CHECK_CANARY;
 
 #endif
 
@@ -195,13 +179,17 @@ static int print_scilla_value_object(const char *json, Tokens *tokens, int objec
 
 // Parse and print interesting data in JSON.
 // Returns number of chars written to output, negative on failure.
-static int process_json(const char buf[], int bufLen, char *output, int output_size)
+int process_json(const char buf[], int bufLen, char *output, int output_size)
 {
+  CHECK_CANARY;
+
   jsmn_parser p;
 
   jsmn_init(&p);
   Tokens tokens;
   tokens.total_tokens = jsmn_parse(&p, buf, bufLen, tokens.tokens, MAX_NUM_TOKENS);
+
+  CHECK_CANARY;
 
 #if 0
   for (int i = 0; i < tokens.total_tokens; i++) {
@@ -222,7 +210,9 @@ static int process_json(const char buf[], int bufLen, char *output, int output_s
            access(&tokens, i)->end, access(&tokens, i)->size, next_token(&tokens, i));
   }
 #endif
-  
+
+  CHECK_CANARY;
+
   if (tokens.total_tokens < 1) {
     PRINTF("Empty JSON");
     return -1;
@@ -235,11 +225,15 @@ static int process_json(const char buf[], int bufLen, char *output, int output_s
     return -1;
   }
 
+  CHECK_CANARY;
+
   // If "params" value is not an array, it's malformed.
   if (access(&tokens, params_idx)->type != JSMN_ARRAY) {
     PRINTF ("Expected \"params\" to be a JSON array\n");
     return -1;
   }
+
+  CHECK_CANARY;
 
   // Print all params.
   int param_idx = params_idx + 1;
@@ -268,6 +262,8 @@ static int process_json(const char buf[], int bufLen, char *output, int output_s
     
     param_idx = next_token(&tokens, param_idx);
   }
+
+  CHECK_CANARY;
 
   return num_chars_total;
 }

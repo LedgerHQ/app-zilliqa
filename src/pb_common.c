@@ -101,7 +101,7 @@ extern void _stack;
 bool check_stack_overflow(uint16_t min_stack_gap){
     uint32_t stack_top = 0;
 
-    PRINTF("+++++++Stack remaining: CUR STACK ADDR: %p, STACK_LIMIT: %p, Available: %d\n", &stack_top, &_stack, ((uintptr_t)&stack_top) - ((uintptr_t)&_stack));
+    PRINTF("+++++++Stack remaining: CUR_STACK_ADDR: %p, STACK_LIMIT: %p, Available: %d\n", &stack_top, &_stack, ((uintptr_t)&stack_top) - ((uintptr_t)&_stack));
     if(((uintptr_t)&stack_top) < (((uintptr_t)&_stack) + min_stack_gap)){
         return true;
     }
