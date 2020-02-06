@@ -5,7 +5,7 @@
 #include "zilliqa.h"
 
 // We want the addresses in JSON data displayed in BECH32
-// #define JSON_BECH32_ADDR
+#define JSON_BECH32_ADDR
 
 #define MAX_NUM_TOKENS 24
 

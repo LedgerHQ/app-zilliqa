@@ -418,7 +418,7 @@ static bool sign_deserialize_stream(const uint8_t *txn1, int txn1Len, int hostBy
 	}
 
 	CHECK_CANARY;
-	// If this is a known smart contract transition, print more details.
+	// If we have the JSON for a smart contract transition parameters, print it.
  	if (ctx->SCMJSONLen != 0) {
 		CHECK_CANARY;
 		int msg_rem = sizeof(ctx->msg) - ctx->msgLen;

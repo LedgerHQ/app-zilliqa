@@ -9,7 +9,7 @@ size_t strlen(const char *str);
 char *strcat(char *dest, const char *src);
 char *strncat(char *dest, const char *src, size_t n);
 
-static bool json_string_eq(const char *json, jsmntok_t *tok, const char *s) {
+static inline bool json_string_eq(const char *json, jsmntok_t *tok, const char *s) {
   if (tok->type == JSMN_STRING && (int)strlen(s) == tok->end - tok->start &&
       strncmp(json + tok->start, s, tok->end - tok->start) == 0) {
     return true;
@@ -17,7 +17,7 @@ static bool json_string_eq(const char *json, jsmntok_t *tok, const char *s) {
   return false;
 }
 
-static jsmntok_t *access (Tokens *tokens, int idx)
+static inline jsmntok_t *access (Tokens *tokens, int idx)
 {
   if (idx >= tokens->total_tokens) {
     FAIL("Internal error: Invalid access: out-of-bounds token\n");
@@ -27,7 +27,7 @@ static jsmntok_t *access (Tokens *tokens, int idx)
 }
 
 // The next token at this depth, skipping all sub-tokens.
-static int next_token (Tokens *tokens, int skip_idx)
+static inline int next_token (Tokens *tokens, int skip_idx)
 {
   switch (access(tokens, skip_idx)->type) {
   case JSMN_UNDEFINED:
@@ -63,7 +63,7 @@ static int next_token (Tokens *tokens, int skip_idx)
 
 // Return the index of the "value" token of "key".
 // Returns -1 if unsuccessful.
-static int find_key_in_object(const char *json, Tokens *tokens, int object_idx, const char* key)
+static inline int find_key_in_object(const char *json, Tokens *tokens, int object_idx, const char* key)
 {
   if (access(tokens, object_idx)->type != JSMN_OBJECT)
     return -1;
@@ -91,7 +91,7 @@ static int find_key_in_object(const char *json, Tokens *tokens, int object_idx, 
 
 // Print a scilla value JSON object { "vname" : ..., "type" : ..., "value" : ... }
 // Returns number of characters outputted to the output buffer. Negative on failure.
-static int print_scilla_value_object(const char *json, Tokens *tokens, int object_idx, char *output, int output_size)
+static inline int print_scilla_value_object(const char *json, Tokens *tokens, int object_idx, char *output, int output_size)
 {
   if (access(tokens, object_idx)->type != JSMN_OBJECT) {
     PRINTF("Scilla value found to be not an Object");
@@ -124,20 +124,21 @@ static int print_scilla_value_object(const char *json, Tokens *tokens, int objec
     const uint8_t *prog,
     size_t prog_len
   );
+  char value_buf[BECH32_ENCODE_BUF_LEN];
+  unsigned char bystr20[20];
 
   CHECK_CANARY;
 
+  // Is this a ByStr20 type Scilla value.
   bool is_addr = json_string_eq(json, access(tokens, type_idx), "ByStr20");
 
   // If address value, attempt bech32 conversion.
-  char value_buf[76]; // max required for bech32_encode.
-  if (is_addr && num_chars_value == 42)
+  if (is_addr && num_chars_value == (strlen ("0x") + 40))
   {
     PRINTF("Converting address in txn data JSON to bech32\n");
-    unsigned char buf[20];
-    hex2bin((uint8_t *) json + access(tokens, value_idx)->start, num_chars_value, buf);
+    hex2bin((uint8_t *) json + access(tokens, value_idx)->start, 40, bystr20);
     CHECK_CANARY;
-    if (!bech32_addr_encode(value_buf, "zil", buf, PUB_ADDR_BYTES_LEN)) {
+    if (!bech32_addr_encode(value_buf, "zil", bystr20, PUB_ADDR_BYTES_LEN)) {
       CHECK_CANARY;
       FAIL ("bech32 encoding of address failed\n");
     }
