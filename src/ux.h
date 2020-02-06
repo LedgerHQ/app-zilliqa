@@ -47,11 +47,11 @@ typedef struct {
 	char toAddr[BECH32_ADDRSTR_LEN+1];
 
 	// Used for display
-	uint8_t msg[192];
+	uint8_t msg[256];
 	unsigned int msgLen;
 
 	// Buffer for the smart contract message JSON.
-	uint8_t SCMJSON[192];
+	uint8_t SCMJSON[288];
 	int SCMJSONLen;
 	union {
 		ProtoTransactionCoreInfo txn;

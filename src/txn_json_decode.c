@@ -203,7 +203,7 @@ int process_json(Tokens *tokens, const char jsonBuf[], int jsonBufLen, char *out
   CHECK_CANARY;
 
   if (tokens->total_tokens < 1) {
-    PRINTF("Empty JSON");
+    PRINTF("Empty JSON\n");
     return -1;
   }
 

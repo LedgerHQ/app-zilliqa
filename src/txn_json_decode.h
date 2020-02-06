@@ -7,7 +7,7 @@
 // We want the addresses in JSON data displayed in BECH32
 #define JSON_BECH32_ADDR
 
-#define MAX_NUM_TOKENS 24
+#define MAX_NUM_TOKENS 28
 
 typedef struct
 {
