@@ -79,7 +79,7 @@ DEFINES    += HAVE_WEBUSB WEBUSB_URL_SIZE_B=$(shell echo -n $(WEBUSB_URL) | wc -
 ##############
 
 CC := $(CLANGPATH)clang
-CFLAGS += -O3 -Os -Isrc
+CFLAGS += -O3 -Os
 
 AS := $(GCCPATH)arm-none-eabi-gcc
 LD := $(GCCPATH)arm-none-eabi-gcc
