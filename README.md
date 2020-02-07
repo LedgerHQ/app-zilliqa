@@ -33,6 +33,7 @@ Get Ledger toolchain related pre-requisites
 
   - `$wget https://launchpad.net/gcc-arm-embedded/5.0/5-2016-q1-update/+download/gcc-arm-none-eabi-5_3-2016q1-20160330-linux.tar.bz2`
   - `$mkdir devenv; tar -xvjf gcc-arm-none-eabi-5_3-2016q1-20160330-linux.tar.bz2 --directory devenv`
+  - Edit `scripts.ld` in the SDK to set `STACK_SIZE` to 1024
 
 Setup environment for building the app
   - `$export BOLOS_SDK=${LEDGER_DIR}/nanos-secure-sdk/`
