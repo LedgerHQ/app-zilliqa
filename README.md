@@ -42,7 +42,7 @@ Setup environment for building the app
 ### Build and install
 
 Fetch the sources and build the Zilliqa Ledger Nano-S app. You should find `app.hex` in the `bin/` directory.
-  - `$cd $LEDGER_DIR; git clone https://github.com/Zilliqa/ledger-app-zilliqa
+  - `$cd $LEDGER_DIR; git clone https://github.com/Zilliqa/ledger-app-zilliqa`
   - (ledgerenv) ...`$make clean; make`
 
 Install the app on your device:
