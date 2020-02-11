@@ -39,8 +39,8 @@ Setup environment for building the app
   - `$export BOLOS_SDK=${LEDGER_DIR}/nanos-secure-sdk/`
   - `$export GCCPATH=${LEDGER_DIR}/devenv/gcc-arm-none-eabi-5_3-2016q1/bin/`
 
-Fetch and build the Zilliqa Ledger Nano-S app `app.hex` in `$ZIL_LEDGER_NANO_S/bin`
-  - `$cd $LEDGER_DIR; git clone https://github.com/CryptoAeon/zil-ledger-nano-s.git`
+Fetch the sources and build the Zilliqa Ledger Nano-S app. You should find `app.hex` in the `bin/` directory.
+  - `$cd $LEDGER_DIR; git clone https://github.com/Zilliqa/ledger-app-zilliqa
   - (ledgerenv) ...`$make clean; make`
 
 The environment variable `DBG=1` can be provided to `make` to enable debug builds. This will enable printing of debugging messages through `PRINTF` when the [debug firmware](https://ledger.readthedocs.io/en/latest/userspace/debugging.html) is installed. This will also enable checks on [stack overflow](https://ledger.readthedocs.io/en/latest/userspace/troubleshooting.html#stack-overflows).
