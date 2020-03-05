@@ -1,0 +1,20 @@
+{
+  "_tag": "proxyTransferFrom",
+  "params": [
+    {
+      "vname": "from",
+      "type": "ByStr20",
+      "value": "0x9bfec715a6bd658fcb62b0f8cc9bfa2ade71434a"
+    },
+    {
+      "vname": "to",
+      "type": "ByStr20",
+      "value": "0x9bfec715a6bd658fcb62b0f8cc9bfa2ade71434b"
+    },
+    {
+      "vname": "value",
+      "type": "Uint128",
+      "value": "100"
+    }
+  ]
+}

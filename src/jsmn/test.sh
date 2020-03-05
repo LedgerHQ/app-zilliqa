@@ -1,10 +1,17 @@
 #!/usr/bin/env bash
 
 succ=1
-for jsonfile in *.json
+for jsonfile in tests/*.json
 do
-    outputfile=`basename $jsonfile .json`.output
+    outputfile=tests/`basename $jsonfile .json`.output
     output=`./jsmn.exe $jsonfile`
+    if [[ $? -ne 0 ]]
+    then
+        echo "jsmn.exe failed for " $jsonfile
+        exit 1
+    fi
+    # Uncomment below line to update tests.
+    # ./jsmn.exe $jsonfile > $outputfile
     if [[ $output != `cat $outputfile` ]]
     then
         echo "Test $jsonfile failed"
@@ -14,7 +21,7 @@ do
     fi        
 done
 
-if [[ $succ ]]
+if [[ $succ -eq 1 ]]
 then
     echo "Testsuite succeeded"
     exit 0

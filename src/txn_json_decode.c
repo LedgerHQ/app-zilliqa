@@ -110,8 +110,6 @@ static inline int print_scilla_value_object(const char *json, Tokens *tokens, in
     return -1;
   }
 
-  int num_chars_vname = access(tokens, vname_idx)->end - access(tokens, vname_idx)->start;
-  const char *vname_start = json + access(tokens, vname_idx)->start;
   int num_chars_value = access(tokens, value_idx)->end - access(tokens, value_idx)->start;
   const char *value_start = json + access(tokens, value_idx)->start;
 
@@ -150,17 +148,26 @@ static inline int print_scilla_value_object(const char *json, Tokens *tokens, in
 
 #endif
 
+#ifdef PRINT_VNAME
+  int num_chars_vname = access(tokens, vname_idx)->end - access(tokens, vname_idx)->start;
+  const char *vname_start = json + access(tokens, vname_idx)->start;
   const char *sep = ":";
   // Add these up and one more for '\0' added by strncat.
   int num_chars_required = num_chars_vname + strlen (sep) + num_chars_value + 1;
+#else
+  // Add these up and one more for '\0' added by strncat.
+  int num_chars_required = num_chars_value + 1;
+#endif // PRINT_VNAME
 
   if (output_size < num_chars_required)
     return -1;
 
   output[0] = '\0';
 
+#ifdef PRINT_VNAME
   strncat(output, vname_start, num_chars_vname);
   strcat(output, sep);
+#endif
   strncat(output, value_start, num_chars_value);
 
   /* We don't need the last null character put in by strncat, so don't account for it. */
@@ -207,6 +214,48 @@ int process_json(Tokens *tokens, const char jsonBuf[], int jsonBufLen, char *out
     return -1;
   }
 
+  int num_chars_total = 0;
+
+  {
+    // Find the key "_tag" in the outer Object.
+    int tag_idx = find_key_in_object(jsonBuf, tokens, 0, "_tag");
+    if (tag_idx < 0) {
+      PRINTF ("Could not find \"_tag\" in JSON\n");
+      return -1;
+    }
+
+    CHECK_CANARY;
+
+    // If "_tag" value is not a string, it's malformed.
+    if (access(tokens, tag_idx)->type != JSMN_STRING) {
+      PRINTF ("Expected \"tag\" to be a JSON string\n");
+      return -1;
+    }
+    // Print the tag value.
+    int num_chars = access(tokens, tag_idx)->end - access(tokens, tag_idx)->start;
+    // Accounting for num_chars and a '\0' (required by strncat below)
+    // if we don't have space, exit early.
+    if (num_chars + 1 > output_size)
+      return -1;
+
+    const char *value_start = jsonBuf + access(tokens, tag_idx)->start;
+    output[0] = '\0';
+    strncat(output, value_start, num_chars);
+    num_chars_total += num_chars;
+    output += num_chars;
+    output_size -= num_chars;
+
+    // Add a space to separate.
+    if (output_size > 0) {
+      num_chars_total++;
+      output[0] = ' ';
+      output++;
+      output_size--;
+    }
+  }
+
+  CHECK_CANARY;
+
   // Find the key "params" in the outer Object.
   int params_idx = find_key_in_object(jsonBuf, tokens, 0, "params");
   if (params_idx < 0) {
@@ -226,7 +275,6 @@ int process_json(Tokens *tokens, const char jsonBuf[], int jsonBufLen, char *out
 
   // Print all params.
   int param_idx = params_idx + 1;
-  int num_chars_total = 0;
   for (int child = 0; child < access(tokens, params_idx)->size; child++) {
     if (access(tokens, param_idx)->type != JSMN_OBJECT) {
       PRINTF("Expected Object item in \"params\" array.\n");
@@ -248,7 +296,7 @@ int process_json(Tokens *tokens, const char jsonBuf[], int jsonBufLen, char *out
       output++;
       output_size--;
     }
-    
+
     param_idx = next_token(tokens, param_idx);
   }
 

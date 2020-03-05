@@ -1,0 +1,10 @@
+{
+  "_tag": "proxyBurn",
+  "params": [
+    {
+      "vname": "value",
+      "type": "Uint128",
+      "value": "200"
+    }
+  ]
+}

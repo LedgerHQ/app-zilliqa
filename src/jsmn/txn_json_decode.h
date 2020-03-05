@@ -17,7 +17,7 @@
 
 #define CHECK_CANARY
 
-#define MAX_NUM_TOKENS 24
+#define MAX_NUM_TOKENS 28
 
 typedef struct
 {
