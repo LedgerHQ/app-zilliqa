@@ -255,7 +255,7 @@ bool decode_txn_data (pb_istream_t *stream, const pb_field_t *field, void **arg)
 {
 	PRINTF("decode_txn_data: data length=%d\n", stream->bytes_left);
 	if (stream->bytes_left > sizeof(ctx->SCMJSON)) {
-		PRINTF("decode_txn_data: Cannot decode txn decode, too large.\n");
+		PRINTF("decode_txn_data: Cannot decode txn, too large.\n");
 		// We can't do anything but just consume the data.
 		pb_read(stream, NULL, stream->bytes_left);
 	}
@@ -430,6 +430,8 @@ static bool sign_deserialize_stream(const uint8_t *txn1, int txn1Len, int hostBy
 			PRINTF("Writing smart contract txn message details failed\n");
 		}
 		ctx->msgLen += num_json_chars;
+	} else {
+		PRINTF("No smart contract txn data to display\n");
 	}
 
 	CHECK_CANARY;
