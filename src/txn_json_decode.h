@@ -6,8 +6,14 @@
 
 // We want the addresses in JSON data displayed in BECH32
 #define JSON_BECH32_ADDR
+// Should we decode the txn JSON or just display it raw?
+// #define TXN_JSON_DECODE
 
+#ifdef TXN_JSON_DECODE
 #define MAX_NUM_TOKENS 28
+#else
+#define MAX_NUM_TOKENS 0
+#endif
 
 typedef struct
 {

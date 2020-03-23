@@ -253,17 +253,30 @@ bool istream_callback (pb_istream_t *stream, pb_byte_t *buf, size_t count)
 
 bool decode_txn_data (pb_istream_t *stream, const pb_field_t *field, void **arg)
 {
-	PRINTF("decode_txn_data: data length=%d\n", stream->bytes_left);
-	if (stream->bytes_left > sizeof(ctx->SCMJSON)) {
+	size_t jsonLen = stream->bytes_left;
+	PRINTF("decode_txn_data: data length=%d\n", jsonLen);
+#ifdef TXN_JSON_DECODE
+	if (jsonLen > sizeof(ctx->SCMJSON)) {
 		PRINTF("decode_txn_data: Cannot decode txn, too large.\n");
 		// We can't do anything but just consume the data.
-		pb_read(stream, NULL, stream->bytes_left);
+		pb_read(stream, NULL, jsonLen);
 	}
 
 	// Save the message/data part of the transaction for later parsing.
 	ctx->SCMJSONLen = stream->bytes_left;
 	PRINTF("decode_txn_data: Saving %d bytes for later parse.\n", ctx->SCMJSONLen);
 	pb_read(stream, (pb_byte_t*) ctx->SCMJSON, ctx->SCMJSONLen);
+#else
+	if (jsonLen + ctx->msgLen > sizeof(ctx->msg)) {
+		PRINTF("decode_txn_data: Cannot decode txn, too large.\n");
+		// We can't do anything but just consume the data.
+		pb_read(stream, NULL, jsonLen);
+	}
+
+	PRINTF("decode_txn_data: Displaying raw JSON of length %d\n", jsonLen);
+	pb_read(stream, (pb_byte_t*) ctx->msg + ctx->msgLen, jsonLen);
+	ctx->msgLen += jsonLen;
+#endif
 
 	return true;
 }
@@ -431,7 +444,7 @@ static bool sign_deserialize_stream(const uint8_t *txn1, int txn1Len, int hostBy
 		}
 		ctx->msgLen += num_json_chars;
 	} else {
-		PRINTF("No smart contract txn data to display\n");
+		PRINTF("Smart contract transition parameters JSON not displayed.\n");
 	}
 
 	CHECK_CANARY;
