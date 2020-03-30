@@ -324,8 +324,6 @@ static bool decode_callback (pb_istream_t *stream, const pb_field_t *field, void
 				FAIL ("bech32 encoded address of incorrect length");
 			}
 			append_ctx_msg(ctx, buf2, BECH32_ADDRSTR_LEN);
-			// Save the toAddr for more smart contract specific processing later on.
-			strcpy(ctx->toAddr, buf2);
 		} else {
 			assert(readlen == ZIL_AMOUNT_GASPRICE_BYTES);
 			// It is either gasprice or amount. a uint128_t value.
@@ -380,9 +378,8 @@ static bool sign_deserialize_stream(const uint8_t *txn1, int txn1Len, int hostBy
   // Setup the stream.
 	pb_istream_t stream = { istream_callback, &ctx->sd, hostBytesLeft + txn1Len, NULL };
 
-	// Initialize the display message and message JSON buffer.
+	// Initialize the display message.
 	ctx->msgLen = 0;
-	ctx->SCMJSONLen = 0;
 
 	CHECK_CANARY;
 	// Initialize schnorr signing, continue with what we have so far.
