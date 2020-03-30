@@ -5,9 +5,6 @@
 #include "zilliqa.h"
 #include "txn.pb.h"
 
-#define JSMN_HEADER
-#include "txn_json_decode.h"
-
 #define TXN_BUF_SIZE 256
 
 typedef struct {
@@ -46,22 +43,10 @@ typedef struct {
   StreamData sd;
 	char toAddr[BECH32_ADDRSTR_LEN+1];
 
-#ifdef TXN_JSON_DECODE
-	// Buffer for the smart contract message JSON.
-	uint8_t SCMJSON[288];
-	// Used for display
-	uint8_t msg[256];
-#else
-	uint8_t SCMJSON[0];
-	// Used for display
 	uint8_t msg[512];
-#endif
 	int SCMJSONLen;
 	unsigned int msgLen;
-	union {
-		ProtoTransactionCoreInfo txn;
-		Tokens tokens;
-	} U;
+	ProtoTransactionCoreInfo txn;
 
 	uint32_t displayIndex;
 	uint8_t indexStr[40]; // variable-length

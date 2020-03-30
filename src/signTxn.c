@@ -8,7 +8,6 @@
 #include "txn.pb.h"
 #include "uint256.h"
 #include "bech32_addr.h"
-#include "txn_json_decode.h"
 
 static signTxnContext_t *ctx = &global.signTxnContext;
 
@@ -255,18 +254,6 @@ bool decode_txn_data (pb_istream_t *stream, const pb_field_t *field, void **arg)
 {
 	size_t jsonLen = stream->bytes_left;
 	PRINTF("decode_txn_data: data length=%d\n", jsonLen);
-#ifdef TXN_JSON_DECODE
-	if (jsonLen > sizeof(ctx->SCMJSON)) {
-		PRINTF("decode_txn_data: Cannot decode txn, too large.\n");
-		// We can't do anything but just consume the data.
-		pb_read(stream, NULL, jsonLen);
-	}
-
-	// Save the message/data part of the transaction for later parsing.
-	ctx->SCMJSONLen = stream->bytes_left;
-	PRINTF("decode_txn_data: Saving %d bytes for later parse.\n", ctx->SCMJSONLen);
-	pb_read(stream, (pb_byte_t*) ctx->SCMJSON, ctx->SCMJSONLen);
-#else
 	if (jsonLen + ctx->msgLen > sizeof(ctx->msg)) {
 		PRINTF("decode_txn_data: Cannot decode txn, too large.\n");
 		// We can't do anything but just consume the data.
@@ -276,7 +263,6 @@ bool decode_txn_data (pb_istream_t *stream, const pb_field_t *field, void **arg)
 	PRINTF("decode_txn_data: Displaying raw JSON of length %d\n", jsonLen);
 	pb_read(stream, (pb_byte_t*) ctx->msg + ctx->msgLen, jsonLen);
 	ctx->msgLen += jsonLen;
-#endif
 
 	return true;
 }
@@ -406,22 +392,22 @@ static bool sign_deserialize_stream(const uint8_t *txn1, int txn1Len, int hostBy
 	CHECK_CANARY;
 
 	// Initialize protobuf Txn structs.
-	os_memset(&ctx->U.txn, 0, sizeof(ctx->U.txn));
+	os_memset(&ctx->txn, 0, sizeof(ctx->txn));
 	// Set callbacks for handling the fields that what we need.
-	ctx->U.txn.toaddr.funcs.decode = decode_callback;
+	ctx->txn.toaddr.funcs.decode = decode_callback;
 	// Since we're using the same callback for amount and gasprice,
 	// but the tag for both will be set to "ByteArray", we differentiate with "arg".
-	ctx->U.txn.amount.data.funcs.decode = decode_callback;
-	ctx->U.txn.amount.data.arg = (void*)ProtoTransactionCoreInfo_amount_tag;
-	ctx->U.txn.gasprice.data.funcs.decode = decode_callback;
-	ctx->U.txn.gasprice.data.arg = (void*)ProtoTransactionCoreInfo_gasprice_tag;
+	ctx->txn.amount.data.funcs.decode = decode_callback;
+	ctx->txn.amount.data.arg = (void*)ProtoTransactionCoreInfo_amount_tag;
+	ctx->txn.gasprice.data.funcs.decode = decode_callback;
+	ctx->txn.gasprice.data.arg = (void*)ProtoTransactionCoreInfo_gasprice_tag;
 	// Set a decoder for the data field of our transaction.
-	ctx->U.txn.data.funcs.decode = decode_txn_data;
+	ctx->txn.data.funcs.decode = decode_txn_data;
 
 	CHECK_CANARY;
 
 	// Start decoding (and signing).
-	if (pb_decode(&stream, ProtoTransactionCoreInfo_fields, &ctx->U.txn)) {
+	if (pb_decode(&stream, ProtoTransactionCoreInfo_fields, &ctx->txn)) {
 		PRINTF ("pb_decode successful\n");
 		deriveAndSignFinish(&ctx->ecs, ctx->keyIndex, ctx->signature, SCHNORR_SIG_LEN_RS);
 		PRINTF ("sign_deserialize_stream: signature: 0x%.*h\n", SCHNORR_SIG_LEN_RS, ctx->signature);
@@ -431,24 +417,6 @@ static bool sign_deserialize_stream(const uint8_t *txn1, int txn1Len, int hostBy
 	}
 
 	CHECK_CANARY;
-	// If we have the JSON for a smart contract transition parameters, print it.
-	// We're going to reuse the union ctx->U here because ctx->U.txn is now done with.
- 	if (ctx->SCMJSONLen != 0) {
-		CHECK_CANARY;
-		int msg_rem = sizeof(ctx->msg) - ctx->msgLen;
-		// Parse the JSON in ctx->SCMJSON and print it in ctx->msg.
-		int num_json_chars = process_json
-			(&(ctx->U.tokens), (const char*) ctx->SCMJSON, ctx->SCMJSONLen, (char*) ctx->msg + ctx->msgLen, msg_rem);
-		if (num_json_chars < 0) {
-			PRINTF("Writing smart contract txn message details failed\n");
-		}
-		ctx->msgLen += num_json_chars;
-	} else {
-		PRINTF("Smart contract transition parameters JSON not displayed.\n");
-	}
-
-	CHECK_CANARY;
-
 	return true;
 }
 
