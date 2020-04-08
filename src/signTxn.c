@@ -257,11 +257,15 @@ bool decode_txn_data (pb_istream_t *stream, const pb_field_t *field, void **arg)
 	if (jsonLen + ctx->msgLen > sizeof(ctx->msg)) {
 		PRINTF("decode_txn_data: Cannot decode txn, too large.\n");
 		// We can't do anything but just consume the data.
-		pb_read(stream, NULL, jsonLen);
+		if (!pb_read(stream, NULL, jsonLen)) {
+			FAIL("pb_read failed during txn data decode");
+		}
 	}
 
 	PRINTF("decode_txn_data: Displaying raw JSON of length %d\n", jsonLen);
-	pb_read(stream, (pb_byte_t*) ctx->msg + ctx->msgLen, jsonLen);
+	if (!pb_read(stream, (pb_byte_t*) ctx->msg + ctx->msgLen, jsonLen)) {
+		FAIL("pb_read failed during txn data decode");
+	}
 	ctx->msgLen += jsonLen;
 
 	return true;
@@ -440,7 +444,9 @@ void handleSignTxn(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t dataLen
 	// Read the (partial) transaction and
 	// Sign the txn and get message for confirmation display, all in ctx.
 	// Signature will not go back to host until message display + approval.
-	sign_deserialize_stream(dataBuffer + dataOffset, txnLen, hostBytesLeft);
+	if (!sign_deserialize_stream(dataBuffer + dataOffset, txnLen, hostBytesLeft)) {
+		FAIL("sign_deserialize_stream failed");
+	}
 
 	// Prepare to display the comparison screen by converting the hash to hex
 	// and moving the first 12 characters into the partialMsg buffer.

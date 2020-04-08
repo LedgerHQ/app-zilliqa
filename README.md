@@ -33,7 +33,6 @@ Get Ledger toolchain related pre-requisites
 
   - `$wget https://launchpad.net/gcc-arm-embedded/5.0/5-2016-q1-update/+download/gcc-arm-none-eabi-5_3-2016q1-20160330-linux.tar.bz2`
   - `$mkdir devenv; tar -xvjf gcc-arm-none-eabi-5_3-2016q1-20160330-linux.tar.bz2 --directory devenv`
-  - Edit `scripts.ld` in the SDK to set `STACK_SIZE` to 1024
 
 Setup environment for building the app
   - `$export BOLOS_SDK=${LEDGER_DIR}/nanos-secure-sdk/`
@@ -42,14 +41,15 @@ Setup environment for building the app
 ### Build and install
 
 Fetch the sources and build the Zilliqa Ledger Nano-S app. You should find `app.hex` in the `bin/` directory.
-  - `$cd $LEDGER_DIR; git clone https://github.com/Zilliqa/ledger-app-zilliqa`
+  - (ledgerenv) ...`$cd $LEDGER_DIR; git clone https://github.com/Zilliqa/ledger-app-zilliqa`
+  - (ledgerenv) ...`$cd ledger-app-zilliqa`
   - (ledgerenv) ...`$make clean; make`
 
 Install the app on your device:
-  - `make load`
+  - (ledgerenv) ...`$make load`
 
 Remove the app from  your device:
-  - `make delete`
+  - (ledgerenv) ...`$make delete`
 
 The environment variable `DBG=1` can be provided to `make` to enable debug builds. This will enable printing of debugging messages through `PRINTF` when the [debug firmware](https://ledger.readthedocs.io/en/latest/userspace/debugging.html) is installed. This will also enable checks on [stack overflow](https://ledger.readthedocs.io/en/latest/userspace/troubleshooting.html#stack-overflows).
 
@@ -59,6 +59,8 @@ To ease setting up the environment for everyday development, we suggest having t
 export LEDGER_DIR=/home/user/ledger # edit this as necessary.
 export GCCPATH=${LEDGER_DIR}/devenv/gcc-arm-none-eabi-5_3-2016q1/bin/
 export BOLOS_SDK=${LEDGER_DIR}/nanos-secure-sdk/
+# We use a custom script.ld. So $SCRIPT_LD must be set to point to it.
+export SCRIPT_LD=${LEDGER_DIR}/ledger-app-zilliqa/script.ld
 source ${LEDGER_DIR}/ledgerenv/bin/activate # activate python3 virtualenv
 ```
 

@@ -186,9 +186,7 @@ static unsigned int ui_signHash_compare_button(unsigned int button_mask, unsigne
 			ctx->displayIndex--;
 		}
 		// Use the displayIndex to recalculate the displayed portion of the
-		// text. os_memmove is the Ledger SDK's version of memmove (there is
-		// no os_memcpy). In practice, I don't think it matters whether you
-		// use os_memmove or the standard memmove from <string.h>.
+		// text.
 		os_memmove(ctx->partialHashStr, ctx->hexHash+ctx->displayIndex, 12);
 		// Re-render the screen.
 		UX_REDISPLAY();
@@ -228,6 +226,11 @@ void handleSignHash(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t dataLe
 	// Read the index of the signing key. U4LE is a helper macro for
 	// converting a 4-byte buffer to a uint32_t.
 	ctx->keyIndex = U4LE(dataBuffer, 0);
+
+	if (dataLength != sizeof(uint32_t) + sizeof(ctx->hash)) {
+		FAIL("Incorrect dataLength calling handleSignHash");
+	}
+
 	// Read the hash.
 	os_memmove(ctx->hash, dataBuffer+4, sizeof(ctx->hash));
 
