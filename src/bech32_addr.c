@@ -24,6 +24,7 @@
  */
 
 #include <os.h>
+#include <string.h>
 
 #include "bech32_addr.h"
 #include "zilliqa.h"

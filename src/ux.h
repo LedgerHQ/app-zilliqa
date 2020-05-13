@@ -3,6 +3,7 @@
 
 #include "schnorr.h"
 #include "zilliqa.h"
+#include "txn.pb.h"
 
 #define TXN_BUF_SIZE 256
 
@@ -41,9 +42,10 @@ typedef struct {
 	uint8_t signature[SCHNORR_SIG_LEN_RS];
   StreamData sd;
 
-	// Used for display
 	uint8_t msg[512];
 	unsigned int msgLen;
+	ProtoTransactionCoreInfo txn;
+
 	uint32_t displayIndex;
 	uint8_t indexStr[40]; // variable-length
 	uint8_t partialMsg[13];
