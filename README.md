@@ -9,7 +9,7 @@ These instructions have been tried on Ubuntu 18.04. Other Linux based platforms 
 ### Ledger Setup
   - Setup your Ledger Nano S as described in the [official guide](https://support.ledger.com/hc/en-us/articles/360000613793)
   - Update the firmware on your device following the instructions [here](https://support.ledger.com/hc/en-us/articles/360002731113-Update-device-firmware)
-    This app has been tested with firmware version `1.5.5`.
+    This app has been tested with firmware version `1.6.0`.
   - If you are on Linux, make sure to set the `udev` rules for ledger. Help for it is provided [here](https://support.ledger.com/hc/en-us/articles/115005165269-Fix-connection-issues).
   - You should now be able to use the Ledger Live app and manage your device using it.
 
@@ -38,11 +38,20 @@ Setup environment for building the app
   - `$export BOLOS_SDK=${LEDGER_DIR}/nanos-secure-sdk/`
   - `$export GCCPATH=${LEDGER_DIR}/devenv/gcc-arm-none-eabi-5_3-2016q1/bin/`
 
-Fetch and build the Zilliqa Ledger Nano-S app `app.hex` in `$ZIL_LEDGER_NANO_S/bin`
-  - `$cd $LEDGER_DIR; git clone https://github.com/CryptoAeon/zil-ledger-nano-s.git`
+### Build and install
+
+Fetch the sources and build the Zilliqa Ledger Nano-S app. You should find `app.hex` in the `bin/` directory.
+  - (ledgerenv) ...`$cd $LEDGER_DIR; git clone https://github.com/Zilliqa/ledger-app-zilliqa`
+  - (ledgerenv) ...`$cd ledger-app-zilliqa`
   - (ledgerenv) ...`$make clean; make`
 
-An extra argument `DBG=1` can be provided to `make` to enable debug builds. This will enable printing of debugging messages through `PRINTF` when the [debug firmware](https://ledger.readthedocs.io/en/latest/userspace/debugging.html) is installed.
+Install the app on your device:
+  - (ledgerenv) ...`$make load`
+
+Remove the app from  your device:
+  - (ledgerenv) ...`$make delete`
+
+The environment variable `DBG=1` can be provided to `make` to enable debug builds. This will enable printing of debugging messages through `PRINTF` when the [debug firmware](https://ledger.readthedocs.io/en/latest/userspace/debugging.html) is installed. This will also enable checks on [stack overflow](https://ledger.readthedocs.io/en/latest/userspace/troubleshooting.html#stack-overflows).
 
 To ease setting up the environment for everyday development, we suggest having the following script `env.sh`. Edit it as necessary.
 
@@ -50,6 +59,8 @@ To ease setting up the environment for everyday development, we suggest having t
 export LEDGER_DIR=/home/user/ledger # edit this as necessary.
 export GCCPATH=${LEDGER_DIR}/devenv/gcc-arm-none-eabi-5_3-2016q1/bin/
 export BOLOS_SDK=${LEDGER_DIR}/nanos-secure-sdk/
+# We use a custom script.ld. So $SCRIPT_LD must be set to point to it.
+export SCRIPT_LD=${LEDGER_DIR}/ledger-app-zilliqa/script.ld
 source ${LEDGER_DIR}/ledgerenv/bin/activate # activate python3 virtualenv
 ```
 
@@ -83,6 +94,8 @@ Sign a hash from index 0
 
 Delete the Zilliqa app
   - (ledgerenv)...`$python -m ledgerblue.deleteApp --targetId 0x31100004 --appName Zilliqa`
+  - Alternatively, just run `make delete`
 
 Install `app.hex` to the device
   - (ledgerenv)...`$python -m ledgerblue.loadApp --path "44'/313'"  --curve "secp256k1" --tlv --targetId "0x31100004" --delete --fileName "app.hex" --appName "Zilliqa" --appVersion "0.3.3" --appFlags "0x40"`
+  - Alternatively, just run `make load`

@@ -29,6 +29,35 @@
         THROW(EXCEPTION); \
     }
 
+#ifdef HAVE_BOLOS_APP_STACK_CANARY
+// This symbol is defined by the link script to be at the start of the stack
+// area.
+extern unsigned long _stack, _estack;
+#define STACK_CANARY (*((volatile uint32_t*) &_stack))
+
+void print_available_stack();
+
+#define INIT_CANARY                                              \
+  STACK_CANARY = 0xDEADBEEF;                                     \
+  PLOC();                                                        \
+  PRINTF("init_canary: initialized at STACK_START 0x%p and STACK_END 0x%p with STACK_SIZE=%d\n", \
+  &_stack, &_estack, ((uintptr_t)&_estack) - ((uintptr_t)&_stack)); \
+  print_available_stack();
+
+#define CHECK_CANARY                             \
+  if (STACK_CANARY != 0xDEADBEEF)                \
+    FAIL("check_canary: EXCEPTION_OVERFLOW");    \
+  PLOC(); print_available_stack();               \
+  PRINTF("check_canary: successfull\n");
+
+#else
+
+#define INIT_CANARY
+#define CHECK_CANARY
+
+#endif // HAVE_BOLOS_APP_STACK_CANARY
+
+
 // Constants
 #define SHA256_HASH_LEN 32
 #define PUB_ADDR_BYTES_LEN 20
@@ -41,6 +70,8 @@
 // UINT128_MAX has 39 digits. Another 3 digits for "0." and '\0'.
 // ("0." is prepended when converted Qa to Zil).
 #define ZIL_UINT128_BUF_LEN 42
+// bech32_addr_encode requires 73 + strlen("zil") sized buffer.
+#define BECH32_ENCODE_BUF_LEN 73 + 3
 
 // exception codes
 #define SW_DEVELOPER_ERR 0x6B00
@@ -92,14 +123,7 @@ int bin64b2dec(uint8_t *dst, uint32_t dst_len, uint64_t n);
 // Given a hex string with numhexchar characters, convert it
 // to byte sequence and place in "bin" (which must be allocated
 // with at least numhexchar/2 bytes already).
-void hex2bin(uint8_t *hexstr, unsigned numhexchars, uint8_t *bin);
-
-// Equivalent to what is there in stdlib.
-int strncmp( const char * s1, const char * s2, size_t n );
-// Equivalent to what is there in stdlib.
-size_t strlen(const char *str);
-// Equivalent to what is there in stdlib.
-char* strcpy(char *dst, const char *src);
+void hex2bin(const uint8_t *hexstr, unsigned numhexchars, uint8_t *bin);
 
 
 #endif
