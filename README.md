@@ -18,7 +18,7 @@ For the sake of this setup, let us have a directory `$LEDGER_DIR` that contains 
 
 Install platform packages
 
-  - `$sudo apt-get install libudev-dev libusb-1.0-0-dev python3-dev python3-venv gcc-multilib g++-multilib clang`
+  - `$sudo apt-get install libudev-dev libusb-1.0-0-dev python3-dev python3-venv gcc-multilib g++-multilib clang pkg-config autoconf libtool`
 
 Setup a virtual python environment for the ledger libraries. For commands shown below, the presence of `(ledgerenv) ...` indicates that the command is being run in the virtual environment.
 
@@ -42,6 +42,7 @@ Setup environment for building the app
 
 Fetch the sources and build the Zilliqa Ledger Nano-S app. You should find `app.hex` in the `bin/` directory.
   - (ledgerenv) ...`$cd $LEDGER_DIR; git clone https://github.com/Zilliqa/ledger-app-zilliqa`
+  - (ledgerenv) ...`export SCRIPT_LD=${LEDGER_DIR}/ledger-app-zilliqa/script.ld`
   - (ledgerenv) ...`$cd ledger-app-zilliqa`
   - (ledgerenv) ...`$make clean; make`
 
