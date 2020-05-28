@@ -43,7 +43,6 @@ Setup environment for building the app
 
 Fetch the sources and build the Zilliqa Ledger Nano-S app. You should find `app.hex` in the `bin/` directory.
   - (ledgerenv) ...`$cd $LEDGER_DIR; git clone https://github.com/Zilliqa/ledger-app-zilliqa`
-  - (ledgerenv) ...`export SCRIPT_LD=${LEDGER_DIR}/ledger-app-zilliqa/script.ld`
   - (ledgerenv) ...`$cd ledger-app-zilliqa`
   - (ledgerenv) ...`$make clean; make`
 
@@ -61,8 +60,6 @@ To ease setting up the environment for everyday development, we suggest having t
 export LEDGER_DIR=/home/user/ledger # edit this as necessary.
 export GCCPATH=${LEDGER_DIR}/devenv/gcc-arm-none-eabi-5_3-2016q1/bin/
 export BOLOS_SDK=${LEDGER_DIR}/nanos-secure-sdk/
-# We use a custom script.ld. So $SCRIPT_LD must be set to point to it.
-export SCRIPT_LD=${LEDGER_DIR}/ledger-app-zilliqa/script.ld
 source ${LEDGER_DIR}/ledgerenv/bin/activate # activate python3 virtualenv
 ```
 
