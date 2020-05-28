@@ -18,13 +18,14 @@ For the sake of this setup, let us have a directory `$LEDGER_DIR` that contains 
 
 Install platform packages
 
-  - `$sudo apt-get install libudev-dev libusb-1.0-0-dev python3-dev python3-venv gcc-multilib g++-multilib clang`
+  - `$sudo apt-get install libudev-dev libusb-1.0-0-dev python3-dev python3-venv gcc-multilib g++-multilib clang pkg-config autoconf libtool libsecp256k1-dev`
 
 Setup a virtual python environment for the ledger libraries. For commands shown below, the presence of `(ledgerenv) ...` indicates that the command is being run in the virtual environment.
 
   - `$python3 -m venv ${LEDGER_DIR}/ledgerenv`
   - `$source ${LEDGER_DIR}/ledgerenv/bin/activate`
   - (ledgerenv) ... `$pip install ledgerblue`
+  - (ledgerenv) ... `$pip install wheel`
   - (ledgerenv) ... `$SECP_BUNDLED_EXPERIMENTAL=1 pip --no-cache-dir install --no-binary secp256k1 secp256k1`
 
 Get Ledger toolchain related pre-requisites
@@ -59,8 +60,6 @@ To ease setting up the environment for everyday development, we suggest having t
 export LEDGER_DIR=/home/user/ledger # edit this as necessary.
 export GCCPATH=${LEDGER_DIR}/devenv/gcc-arm-none-eabi-5_3-2016q1/bin/
 export BOLOS_SDK=${LEDGER_DIR}/nanos-secure-sdk/
-# We use a custom script.ld. So $SCRIPT_LD must be set to point to it.
-export SCRIPT_LD=${LEDGER_DIR}/ledger-app-zilliqa/script.ld
 source ${LEDGER_DIR}/ledgerenv/bin/activate # activate python3 virtualenv
 ```
 
@@ -97,5 +96,5 @@ Delete the Zilliqa app
   - Alternatively, just run `make delete`
 
 Install `app.hex` to the device
-  - (ledgerenv)...`$python -m ledgerblue.loadApp --path "44'/313'"  --curve "secp256k1" --tlv --targetId "0x31100004" --delete --fileName "app.hex" --appName "Zilliqa" --appVersion "0.3.3" --appFlags "0x40"`
+  - (ledgerenv)...`$python -m ledgerblue.loadApp --path "44'/313'"  --curve "secp256k1" --tlv --targetId "0x31100004" --delete --fileName "app.hex" --appName "Zilliqa" --appVersion "0.4.0" --appFlags "0x40"`
   - Alternatively, just run `make load`
