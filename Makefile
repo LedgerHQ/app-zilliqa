@@ -18,6 +18,9 @@
 ifeq ($(BOLOS_SDK),)
 $(error Environment variable BOLOS_SDK is not set)
 endif
+
+SCRIPT_LD = script.ld
+
 include $(BOLOS_SDK)/Makefile.defines
 
 #########
