@@ -111,7 +111,12 @@
 // because multiple files include ux.h; they need to be defined in exactly one
 // place. See ux.h for their descriptions.
 commandContext global;
+#ifdef TARGET_NANOX
+ux_state_t G_ux;
+bolos_ux_params_t G_ux_params;
+#else // TARGET_NANOX
 ux_state_t ux;
+#endif // TARGET_NANOX
 
 // Here we define the main menu, using the Ledger-provided menu API. This menu
 // turns out to be fairly unimportant for Nano S apps, since commands are sent
@@ -390,6 +395,10 @@ __attribute__((section(".boot"))) int main(void) {
 		BEGIN_TRY {
 			TRY {
 				io_seproxyhal_init();
+#ifdef TARGET_NANOX
+				// grab the current plane mode setting
+				G_io_app.plane_mode = os_setting_get(OS_SETTING_PLANEMODE, NULL, 0);
+#endif // TARGET_NANOX
 				USB_power(0);
 				USB_power(1);
 				ui_idle();
