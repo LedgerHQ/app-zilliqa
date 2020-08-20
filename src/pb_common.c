@@ -97,6 +97,7 @@ bool pb_field_iter_find(pb_field_iter_t *iter, uint32_t tag)
 
 extern void _stack;
 
+#ifdef PB_CHECK_STACK_OVERFLOW
 //Return true if there is less than MIN_BSS_STACK_GAP bytes available in the stack
 bool check_stack_overflow(uint16_t min_stack_gap){
     uint32_t stack_top = 0;
@@ -108,3 +109,4 @@ bool check_stack_overflow(uint16_t min_stack_gap){
     
     return false;
 }
+#endif

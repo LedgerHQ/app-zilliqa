@@ -68,7 +68,10 @@ delete:
 ############
 
 DEFINES += OS_IO_SEPROXYHAL IO_SEPROXYHAL_BUFFER_SIZE_B=256
-DEFINES += HAVE_BAGL
+DEFINES += HAVE_BAGL HAVE_SPRINTF HAVE_SNPRINTF_FORMAT_U
+
+# For enabling protobuf library to check for stackoverflow.
+# DEFINES += PB_CHECK_STACK_OVERFLOW
 
 ifdef DBG
 ifeq ($(TARGET_NAME),TARGET_NANOX)

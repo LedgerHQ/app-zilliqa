@@ -1000,8 +1000,10 @@ static void pb_message_set_to_defaults(const pb_field_t fields[], void *dest_str
 #define PB_DECODE_STACK_REQUIREMENT 260
 bool checkreturn pb_decode_noinit(pb_istream_t *stream, const pb_field_t fields[], void *dest_struct)
 {
+#ifdef PB_CHECK_STACK_OVERFLOW
     if(check_stack_overflow(PB_DECODE_STACK_REQUIREMENT))
         PB_RETURN_ERROR(stream, "not enough stack");
+#endif // PB_CHECK_STACK_OVERFLOW
 
     // uint32_t fields_seen[(PB_MAX_REQUIRED_FIELDS + 31) / 32] = {0, 0};
     // const uint32_t allbits = ~(uint32_t)0;
