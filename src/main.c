@@ -111,13 +111,44 @@
 // because multiple files include ux.h; they need to be defined in exactly one
 // place. See ux.h for their descriptions.
 commandContext global;
-#ifdef TARGET_NANOX
+
+#if defined(HAVE_UX_FLOW)
 ux_state_t G_ux;
 bolos_ux_params_t G_ux_params;
-#else // TARGET_NANOX
-ux_state_t ux;
-#endif // TARGET_NANOX
 
+UX_STEP_NOCB(
+    ux_idle_flow_1_step,
+    bn,
+    {
+      "Application",
+      "is ready",
+    });
+UX_STEP_NOCB(
+    ux_idle_flow_2_step,
+    bn,
+    {
+      "Version",
+      APPVERSION,
+    });
+UX_STEP_VALID(
+    ux_idle_flow_3_step,
+    pb,
+    os_sched_exit(-1),
+    {
+      &C_icon_dashboard,
+      "Quit",
+    });
+
+const ux_flow_step_t *        const ux_idle_flow [] = {
+  &ux_idle_flow_1_step,
+  &ux_idle_flow_2_step,
+  &ux_idle_flow_3_step,
+  FLOW_END_STEP,
+};
+
+#else
+
+ux_state_t ux;
 // Here we define the main menu, using the Ledger-provided menu API. This menu
 // turns out to be fairly unimportant for Nano S apps, since commands are sent
 // by the computer instead of being initiated by the user. It typically just
@@ -160,13 +191,23 @@ static const ux_menu_entry_t menu_main[] = {
 	UX_MENU_END,
 };
 
+#endif // HAVE_UX_FLOW
+
 // ui_idle displays the main menu. Note that your app isn't required to use a
 // menu as its idle screen; you can define your own completely custom screen.
 void ui_idle(void) {
+#if defined(HAVE_UX_FLOW)
+    // reserve a display stack slot if none yet
+    if(G_ux.stack_count == 0) {
+        ux_stack_push();
+    }
+    ux_flow_init(0, ux_idle_flow, NULL);
+#else
 	// The first argument is the starting index within menu_main, and the last
 	// argument is a preprocessor; I've never seen an app that uses either
 	// argument.
 	UX_MENU_DISPLAY(0, menu_main, NULL);
+#endif // HAVE_UX_FLOW
 }
 
 // io_exchange_with_code is a helper function for sending response APDUs from
