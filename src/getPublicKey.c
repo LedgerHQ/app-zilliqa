@@ -22,12 +22,141 @@
 #include <stdbool.h>
 #include <os.h>
 #include <os_io_seproxyhal.h>
-#include "zilliqa.h"
+
+#include "glyphs.h"
 #include "ux.h"
+#include "zilliqa.h"
 #include "bech32_addr.h"
 
 // Get a pointer to getPublicKey's state variables.
-static getPublicKeyContext_t *ctx = &global.getPublicKeyContext;
+static getPublicKeyContext_t * const ctx = &global.getPublicKeyContext;
+
+// 1. Derive the public key and address and store them in the APDU
+// buffer. (For simplicity, we always send both, regardless of which
+// one the user requested.)
+// 2. Fill ctx->fullStr with the display string.
+static int prepareZilPubKeyAddr()
+{
+    // The response APDU will contain multiple objects, which means we need to
+    // remember our offset within G_io_apdu_buffer. By convention, the offset
+    // variable is named 'tx' and begins at 0.
+    uint16_t tx = 0;
+    cx_ecfp_public_key_t publicKey;
+
+    // 1. Generate public key
+    deriveZilPubKey(ctx->keyIndex, &publicKey);
+    assert(publicKey.W_len == PUBLIC_KEY_BYTES_LEN);
+    os_memmove(G_io_apdu_buffer + tx, publicKey.W, publicKey.W_len);
+    tx += publicKey.W_len;
+    // 2. Generate address from public key.
+    uint8_t bytesAddr[PUB_ADDR_BYTES_LEN];
+    pubkeyToZilAddress(bytesAddr, &publicKey);
+    // We have the address bytes, convert that to a null-terminated bech32 string.
+    // 73 is the max size needed, as per bech32_addr_encode spec. 3 more for "zil".
+    char bech32Str[73+3];
+    bech32_addr_encode(bech32Str, "zil", bytesAddr, PUB_ADDR_BYTES_LEN);
+    // Copy over the bech32 string to the apdu buffer for exchange.
+    os_memcpy(G_io_apdu_buffer + tx, bech32Str, BECH32_ADDRSTR_LEN);
+    tx += BECH32_ADDRSTR_LEN;
+
+    PRINTF("Public Key: %.*h\n", publicKey.W_len, G_io_apdu_buffer);
+    PRINTF("Address: %s\n", bech32Str);
+
+    //  ctx->fullStr will contain the final text for display.
+    if (ctx->genAddr) {
+        // The APDU buffer contains printable bech32 string.
+        os_memcpy(ctx->fullStr, G_io_apdu_buffer + publicKey.W_len, BECH32_ADDRSTR_LEN);
+        assert(sizeof(ctx->fullStr) >= BECH32_ADDRSTR_LEN);
+        ctx->fullStr[BECH32_ADDRSTR_LEN] = '\0';
+    } else {
+        // The APDU buffer contains the raw bytes of the public key.
+        // So, first we need to convert to a human-readable form.
+        bin2hex(ctx->fullStr, sizeof(ctx->fullStr), G_io_apdu_buffer, publicKey.W_len);
+    }
+
+    return tx;
+}
+
+#ifdef HAVE_UX_FLOW
+
+void do_approve(const bagl_element_t *e)
+{
+    // tx must ideally be gotten from prepareZilPubKeyAddr(),
+    // but our flow makes it a bit difficult. So this is a hack.
+    int tx = PUBLIC_KEY_BYTES_LEN + BECH32_ADDRSTR_LEN;
+    io_exchange_with_code(SW_OK, tx);
+    ui_idle();
+}
+
+void do_reject(const bagl_element_t *e)
+{
+    io_exchange_with_code(SW_USER_REJECTED, 0);
+    ui_idle();
+}
+
+UX_STEP_NOCB(
+    ux_display_address_flow_1_step,
+    bn, // TODO: pb,
+    {
+      "", // TOOD: &C_icon_eye,
+      "Verify address",
+    });
+UX_STEP_NOCB(
+    ux_display_address_flow_2_step,
+    bnnn_paging,
+    {
+      .title = "Address",
+      .text = (char *) ctx->fullStr,
+    });
+
+UX_STEP_NOCB(
+    ux_display_public_flow_1_step,
+    bn, // TODO: pb,
+    {
+      "", // TOOD: &C_icon_eye,
+      "Verify Public Key",
+    });
+UX_STEP_NOCB(
+    ux_display_public_flow_2_step,
+    bnnn_paging,
+    {
+      .title = "Public Key",
+      .text = (char *) ctx->fullStr,
+    });
+UX_STEP_VALID(
+    ux_display_public_flow_3_step,
+    bn, // TODO: pb
+    do_approve(NULL),
+    {
+      "", // TODO: &C_icon_validate_14,
+      "Approve",
+    });
+UX_STEP_VALID(
+    ux_display_public_flow_4_step,
+    bn, // TODO: pb
+    do_reject(NULL),
+    {
+      "", // TODO: &C_icon_crossmark,
+      "Reject",
+    });
+
+const ux_flow_step_t *        const ux_display_address_flow [] = {
+  &ux_display_address_flow_1_step,
+  &ux_display_address_flow_2_step,
+  &ux_display_public_flow_3_step,
+  &ux_display_public_flow_4_step,
+  FLOW_END_STEP,
+};
+
+const ux_flow_step_t *        const ux_display_public_flow [] = {
+  &ux_display_public_flow_1_step,
+  &ux_display_public_flow_2_step,
+  &ux_display_public_flow_3_step,
+  &ux_display_public_flow_4_step,
+  FLOW_END_STEP,
+};
+
+#else
 
 // Define the comparison screen. This is where the user will compare the
 // public key (or address) on their device to the one shown on the computer.
@@ -108,15 +237,10 @@ static const bagl_element_t ui_getPublicKey_approve[] = {
 };
 
 // This is the button handler for the approval screen. If the user approves,
-// it generates and sends the public key and address. (For simplicity, we
-// always send both, regardless of which one the user requested.)
+// it generates and sends the public key and address.
 static unsigned int
 ui_getPublicKey_approve_button(unsigned int button_mask, unsigned int button_mask_counter) {
-    // The response APDU will contain multiple objects, which means we need to
-    // remember our offset within G_io_apdu_buffer. By convention, the offset
-    // variable is named 'tx'.
-    uint16_t tx = 0;
-    cx_ecfp_public_key_t publicKey;
+
     switch (button_mask) {
         case BUTTON_EVT_RELEASED | BUTTON_LEFT: // REJECT
             io_exchange_with_code(SW_USER_REJECTED, 0);
@@ -124,40 +248,11 @@ ui_getPublicKey_approve_button(unsigned int button_mask, unsigned int button_mas
             break;
 
         case BUTTON_EVT_RELEASED | BUTTON_RIGHT: // APPROVE
-            // Derive the public key and address and store them in the APDU
-            // buffer. Even though we know that tx starts at 0, it's best to
-            // always add it explicitly; this prevents a bug if we reorder the
-            // statements later.
-
-            // 1. Generate public key
-            deriveZilPubKey(ctx->keyIndex, &publicKey);
-            os_memmove(G_io_apdu_buffer + tx, publicKey.W, publicKey.W_len);
-            tx += publicKey.W_len;
-            // 2. Generate address from public key.
-            uint8_t bytesAddr[PUB_ADDR_BYTES_LEN];
-            pubkeyToZilAddress(bytesAddr, &publicKey);
-            // We have the address bytes, convert that to a null-terminated bech32 string.
-            // 73 is the max size needed, as per bech32_addr_encode spec. 3 more for "zil".
-            char bech32Str[73+3];
-            bech32_addr_encode(bech32Str, "zil", bytesAddr, PUB_ADDR_BYTES_LEN);
-            // Copy over the bech32 string to the apdu buffer for exchange.
-            os_memcpy(G_io_apdu_buffer + tx, bech32Str, BECH32_ADDRSTR_LEN);
-            tx += BECH32_ADDRSTR_LEN;
-
-            PRINTF("Public Key: %.*h\n", publicKey.W_len, G_io_apdu_buffer);
-            PRINTF("Address: %s\n", bech32Str);
-
             // Prepare the comparison screen, filling in the header and body text.
             os_memmove(ctx->typeStr, "Compare:", 9);
 
-            if (ctx->genAddr) {
-                // The APDU buffer contains printable bech32 string.
-                os_memcpy(ctx->fullStr, G_io_apdu_buffer + publicKey.W_len, BECH32_ADDRSTR_LEN);
-            } else {
-                // The APDU buffer contains the raw bytes of the public key.
-                // So, first we need to convert to a human-readable form.
-                bin2hex(ctx->fullStr, sizeof(ctx->fullStr), G_io_apdu_buffer, publicKey.W_len);
-            }
+            // The text to display will be put in ctx->fullStr.
+            int tx = prepareZilPubKeyAddr();
 
             // Flush the APDU buffer, sending the response.
             // Response contains both the public key and the public address.
@@ -173,6 +268,8 @@ ui_getPublicKey_approve_button(unsigned int button_mask, unsigned int button_mas
     }
     return 0;
 }
+
+#endif // HAVE_UX_FLOW
 
 // These are APDU parameters that control the behavior of the getPublicKey
 // command.
@@ -218,7 +315,15 @@ void handleGetPublicKey(uint8_t p1,
     int n = bin64b2dec(ctx->keyStr + offset, sizeof(ctx->keyStr)-offset, ctx->keyIndex);
     os_memmove(ctx->keyStr + offset + n, "?", 2);
 
+#ifdef HAVE_UX_FLOW
+    prepareZilPubKeyAddr();
+    if (ctx->genAddr)
+        ux_flow_init(0, ux_display_address_flow, NULL);
+    else
+        ux_flow_init(0, ux_display_public_flow, NULL);
+#else
     UX_DISPLAY(ui_getPublicKey_approve, NULL);
+#endif
 
     *flags |= IO_ASYNCH_REPLY;
 }
