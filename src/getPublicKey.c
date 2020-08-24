@@ -96,9 +96,9 @@ void do_reject(const bagl_element_t *e)
 
 UX_STEP_NOCB(
     ux_display_address_flow_1_step,
-    bn, // TODO: pb,
+    pb,
     {
-      "", // TOOD: &C_icon_eye,
+      &C_icon_eye,
       "Verify address",
     });
 UX_STEP_NOCB(
@@ -111,9 +111,9 @@ UX_STEP_NOCB(
 
 UX_STEP_NOCB(
     ux_display_public_flow_1_step,
-    bn, // TODO: pb,
+    pb,
     {
-      "", // TOOD: &C_icon_eye,
+      &C_icon_eye,
       "Verify Public Key",
     });
 UX_STEP_NOCB(
@@ -125,18 +125,18 @@ UX_STEP_NOCB(
     });
 UX_STEP_VALID(
     ux_display_public_flow_3_step,
-    bn, // TODO: pb
+    pb,
     do_approve(NULL),
     {
-      "", // TODO: &C_icon_validate_14,
+      &C_icon_validate_14,
       "Approve",
     });
 UX_STEP_VALID(
     ux_display_public_flow_4_step,
-    bn, // TODO: pb
+    pb,
     do_reject(NULL),
     {
-      "", // TODO: &C_icon_crossmark,
+      &C_icon_crossmark,
       "Reject",
     });
 
