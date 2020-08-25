@@ -27,7 +27,70 @@
 // Get a pointer to signHash's state variables. This is purely for
 // convenience, so that we can refer to these variables concisely from any
 // signHash-related function.
-static signHashContext_t *ctx = &global.signHashContext;
+static signHashContext_t * const ctx = &global.signHashContext;
+
+#ifdef HAVE_UX_FLOW
+
+static void do_approve(const bagl_element_t *e)
+{
+		// Derive the secret key and sign the hash, storing the signature in
+		// the APDU buffer.
+		deriveAndSign(G_io_apdu_buffer, SCHNORR_SIG_LEN_RS, ctx->keyIndex, ctx->hash, 32);
+		// Send the data in the APDU buffer, which is a 64 byte signature.
+		io_exchange_with_code(SW_OK, SCHNORR_SIG_LEN_RS);
+		// Return to the main screen.
+		ui_idle();
+}
+
+static void do_reject(const bagl_element_t *e)
+{
+    io_exchange_with_code(SW_USER_REJECTED, 0);
+    ui_idle();
+}
+
+UX_FLOW_DEF_NOCB(
+    ux_signhash_flow_1_step,
+    pnn,
+    {
+      &C_icon_certificate,
+      "Sign",
+      "Message hash",
+    });
+UX_FLOW_DEF_NOCB(
+    ux_signhash_flow_2_step,
+    bnnn_paging,
+    {
+      .title = "Message hash",
+      .text = (char *) ctx->hexHash,
+    });
+UX_FLOW_DEF_VALID(
+    ux_signhash_flow_3_step,
+    pbb,
+    do_approve(NULL),
+    {
+      &C_icon_validate_14,
+      "Sign",
+      "message",
+    });
+UX_FLOW_DEF_VALID(
+    ux_signhash_flow_4_step,
+    pbb,
+    do_reject(NULL),
+    {
+      &C_icon_crossmark,
+      "Cancel",
+      "signature",
+    });
+
+const ux_flow_step_t *        const ux_signhash_flow [] = {
+  &ux_signhash_flow_1_step,
+  &ux_signhash_flow_2_step,
+  &ux_signhash_flow_3_step,
+  &ux_signhash_flow_4_step,
+  FLOW_END_STEP,
+};
+
+#else
 
 // Define the approval screen. This is where the user will confirm that they
 // want to sign the hash. This UI layout is very common: a background, two
@@ -218,6 +281,8 @@ static unsigned int ui_signHash_compare_button(unsigned int button_mask, unsigne
 	return 0;
 }
 
+#endif // HAVE_UX_FLOW
+
 // handleSignHash is the entry point for the signHash command. Like all
 // command handlers, it is responsible for reading command data from
 // dataBuffer, initializing the command context, and displaying the first
@@ -233,22 +298,27 @@ void handleSignHash(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t dataLe
 
 	// Read the hash.
 	os_memmove(ctx->hash, dataBuffer+4, sizeof(ctx->hash));
-
 	// Prepare to display the comparison screen by converting the hash to hex
-	// and moving the first 12 characters into the partialHashStr buffer.
 	bin2hex(ctx->hexHash, sizeof(ctx->hexHash), ctx->hash, sizeof(ctx->hash));
+	PRINTF("hash:    %.*H \n", 32, ctx->hash);
+	PRINTF("hexHash: %.*H \n", 64, ctx->hexHash);
+
+#ifdef HAVE_UX_FLOW
+	ux_flow_init(0, ux_signhash_flow, NULL);
+#else
+
+	// and moving the first 12 characters into the partialHashStr buffer.
 	os_memmove(ctx->partialHashStr, ctx->hexHash, 12);
 	ctx->partialHashStr[12] = '\0';
 	ctx->displayIndex = 0;
-
-	PRINTF("hash:    %.*H \n", 32, ctx->hash);
-	PRINTF("hexHash: %.*H \n", 64, ctx->hexHash);
 
 	// Call UX_DISPLAY to display the comparison screen, passing the
 	// corresponding preprocessor. You might ask: Why doesn't UX_DISPLAY
 	// also take the button handler as an argument, instead of using macro
 	// magic? To which I can only reply: ¯\_(ツ)_/¯
 	UX_DISPLAY(ui_signHash_compare, ui_prepro_signHash_compare);
+
+#endif // HAVE_UX_FLOW
 
 	// Set the IO_ASYNC_REPLY flag. This flag tells zil_main that we aren't
 	// sending data to the computer immediately; we need to wait for a button

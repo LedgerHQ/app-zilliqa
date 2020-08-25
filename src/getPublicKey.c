@@ -79,7 +79,7 @@ static int prepareZilPubKeyAddr()
 
 #ifdef HAVE_UX_FLOW
 
-void do_approve(const bagl_element_t *e)
+static void do_approve(const bagl_element_t *e)
 {
     // tx must ideally be gotten from prepareZilPubKeyAddr(),
     // but our flow makes it a bit difficult. So this is a hack.
@@ -88,7 +88,7 @@ void do_approve(const bagl_element_t *e)
     ui_idle();
 }
 
-void do_reject(const bagl_element_t *e)
+static void do_reject(const bagl_element_t *e)
 {
     io_exchange_with_code(SW_USER_REJECTED, 0);
     ui_idle();
