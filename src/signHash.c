@@ -29,13 +29,24 @@
 // signHash-related function.
 static signHashContext_t * const ctx = &global.signHashContext;
 
+// Print the key index into the indexStr buffer. 
+static void prepareIndexStr(void)
+{
+		os_memmove(ctx->indexStr, "with Key #", 10);
+		int n = bin64b2dec(ctx->indexStr+10, sizeof(ctx->indexStr)-10, ctx->keyIndex);
+		// We copy two bytes so as to include the terminating '\0' byte for the string.
+		os_memmove(ctx->indexStr+10+n, "?", 2);
+}
+
 #ifdef HAVE_UX_FLOW
 
 static void do_approve(const bagl_element_t *e)
 {
 		// Derive the secret key and sign the hash, storing the signature in
 		// the APDU buffer.
-		deriveAndSign(G_io_apdu_buffer, SCHNORR_SIG_LEN_RS, ctx->keyIndex, ctx->hash, 32);
+		assert(SHA256_HASH_LEN == sizeof(ctx->hash));
+		deriveAndSign(G_io_apdu_buffer, SCHNORR_SIG_LEN_RS,
+									ctx->keyIndex, ctx->hash, SHA256_HASH_LEN);
 		// Send the data in the APDU buffer, which is a 64 byte signature.
 		io_exchange_with_code(SW_OK, SCHNORR_SIG_LEN_RS);
 		// Return to the main screen.
@@ -53,33 +64,31 @@ UX_FLOW_DEF_NOCB(
     pnn,
     {
       &C_icon_certificate,
-      "Sign",
-      "Message hash",
+      "Sign SHA256 Hash",
+			(char *) ctx->indexStr,
     });
 UX_FLOW_DEF_NOCB(
     ux_signhash_flow_2_step,
     bnnn_paging,
     {
-      .title = "Message hash",
+      .title = "Hash",
       .text = (char *) ctx->hexHash,
     });
 UX_FLOW_DEF_VALID(
     ux_signhash_flow_3_step,
-    pbb,
+    pn,
     do_approve(NULL),
     {
       &C_icon_validate_14,
       "Sign",
-      "message",
     });
 UX_FLOW_DEF_VALID(
     ux_signhash_flow_4_step,
-    pbb,
+    pn,
     do_reject(NULL),
     {
       &C_icon_crossmark,
       "Cancel",
-      "signature",
     });
 
 const ux_flow_step_t *        const ux_signhash_flow [] = {
@@ -265,12 +274,6 @@ static unsigned int ui_signHash_compare_button(unsigned int button_mask, unsigne
 		break;
 
 	case BUTTON_EVT_RELEASED | BUTTON_LEFT | BUTTON_RIGHT: // PROCEED
-		// Prepare to display the approval screen by printing the key index
-		// into the indexStr buffer. We copy two bytes in the final os_memmove
-		// so as to include the terminating '\0' byte for the string.
-		os_memmove(ctx->indexStr, "with Key #", 10);
-		int n = bin64b2dec(ctx->indexStr+10, sizeof(ctx->indexStr)-10, ctx->keyIndex);
-		os_memmove(ctx->indexStr+10+n, "?", 2);
 		// Note that because the approval screen does not have a preprocessor,
 		// we must pass NULL.
 		UX_DISPLAY(ui_signHash_approve, NULL);
@@ -291,6 +294,8 @@ void handleSignHash(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t dataLe
 	// Read the index of the signing key. U4LE is a helper macro for
 	// converting a 4-byte buffer to a uint32_t.
 	ctx->keyIndex = U4LE(dataBuffer, 0);
+	// Generate a string for the index.
+	prepareIndexStr();
 
 	if (dataLength != sizeof(uint32_t) + sizeof(ctx->hash)) {
 		FAIL("Incorrect dataLength calling handleSignHash");

@@ -95,32 +95,18 @@ static void do_reject(const bagl_element_t *e)
 }
 
 UX_STEP_NOCB(
-    ux_display_address_flow_1_step,
-    pb,
-    {
-      &C_icon_eye,
-      "Verify address",
-    });
-UX_STEP_NOCB(
-    ux_display_address_flow_2_step,
-    bnnn_paging,
-    {
-      .title = "Address",
-      .text = (char *) ctx->fullStr,
-    });
-
-UX_STEP_NOCB(
     ux_display_public_flow_1_step,
-    pb,
+    pnn,
     {
       &C_icon_eye,
-      "Verify Public Key",
+      (char *) ctx->typeStr,
+      (char *) ctx->keyStr,
     });
 UX_STEP_NOCB(
     ux_display_public_flow_2_step,
     bnnn_paging,
     {
-      .title = "Public Key",
+      .title = "Value",
       .text = (char *) ctx->fullStr,
     });
 UX_STEP_VALID(
@@ -139,14 +125,6 @@ UX_STEP_VALID(
       &C_icon_crossmark,
       "Reject",
     });
-
-const ux_flow_step_t *        const ux_display_address_flow [] = {
-  &ux_display_address_flow_1_step,
-  &ux_display_address_flow_2_step,
-  &ux_display_public_flow_3_step,
-  &ux_display_public_flow_4_step,
-  FLOW_END_STEP,
-};
 
 const ux_flow_step_t *        const ux_display_public_flow [] = {
   &ux_display_public_flow_1_step,
@@ -303,24 +281,20 @@ void handleGetPublicKey(uint8_t p1,
     ctx->genAddr = (p2 == P2_DISPLAY_ADDRESS);
 
     // Prepare the approval screen, filling in the header and body text.
-    int offset = 5;
     if (ctx->genAddr) {
         os_memmove(ctx->typeStr, "Generate Address", 17);
     }
     else {
         os_memmove(ctx->typeStr, "Generate Public", 16);
     }
-
+    int offset = 5;
     os_memmove(ctx->keyStr, "Key #", offset);
     int n = bin64b2dec(ctx->keyStr + offset, sizeof(ctx->keyStr)-offset, ctx->keyIndex);
     os_memmove(ctx->keyStr + offset + n, "?", 2);
 
 #ifdef HAVE_UX_FLOW
     prepareZilPubKeyAddr();
-    if (ctx->genAddr)
-        ux_flow_init(0, ux_display_address_flow, NULL);
-    else
-        ux_flow_init(0, ux_display_public_flow, NULL);
+    ux_flow_init(0, ux_display_public_flow, NULL);
 #else
     UX_DISPLAY(ui_getPublicKey_approve, NULL);
 #endif
