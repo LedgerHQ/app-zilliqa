@@ -325,6 +325,7 @@ bool decode_txn_data (pb_istream_t *stream, const pb_field_t *field, void **arg)
 		if (!pb_read(stream, NULL, jsonLen)) {
 			FAIL("pb_read failed during txn data decode");
 		}
+		return true;
 	}
 
 	PRINTF("decode_txn_data: Displaying raw JSON of length %d\n", jsonLen);
