@@ -66,7 +66,7 @@ static int prepareZilPubKeyAddr()
     if (ctx->genAddr) {
         // The APDU buffer contains printable bech32 string.
         os_memcpy(ctx->fullStr, G_io_apdu_buffer + publicKey.W_len, BECH32_ADDRSTR_LEN);
-        assert(sizeof(ctx->fullStr) >= BECH32_ADDRSTR_LEN);
+        assert(sizeof(ctx->fullStr) >= BECH32_ADDRSTR_LEN + 1);
         ctx->fullStr[BECH32_ADDRSTR_LEN] = '\0';
     } else {
         // The APDU buffer contains the raw bytes of the public key.

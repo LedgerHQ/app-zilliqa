@@ -6,6 +6,7 @@
 #include "txn.pb.h"
 
 #define TXN_BUF_SIZE 256
+#define TXN_DISP_MSG_MAX_LEN 512
 
 typedef struct {
 	uint32_t keyIndex;
@@ -42,7 +43,7 @@ typedef struct {
 	uint8_t signature[SCHNORR_SIG_LEN_RS];
   StreamData sd;
 
-	uint8_t msg[512];
+	uint8_t msg[TXN_DISP_MSG_MAX_LEN + 1]; // last byte for '\0'
 	unsigned int msgLen;
 	ProtoTransactionCoreInfo txn;
 

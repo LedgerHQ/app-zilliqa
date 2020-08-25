@@ -48,6 +48,7 @@ static void do_approve(const bagl_element_t *e)
 		deriveAndSign(G_io_apdu_buffer, SCHNORR_SIG_LEN_RS,
 									ctx->keyIndex, ctx->hash, SHA256_HASH_LEN);
 		// Send the data in the APDU buffer, which is a 64 byte signature.
+		assert(IO_APDU_BUFFER_SIZE >= SCHNORR_SIG_LEN_RS);
 		io_exchange_with_code(SW_OK, SCHNORR_SIG_LEN_RS);
 		// Return to the main screen.
 		ui_idle();
