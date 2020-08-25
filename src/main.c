@@ -102,9 +102,9 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include <os_io_seproxyhal.h>
+#include "os_io_seproxyhal.h"
 #include "glyphs.h"
-#include "ux.h"
+#include "zilliqa_ux.h"
 #include "zilliqa.h"
 
 // These are global variables declared in ux.h. They can't be defined there
@@ -443,6 +443,10 @@ __attribute__((section(".boot"))) int main(void) {
 				USB_power(0);
 				USB_power(1);
 				ui_idle();
+#ifdef HAVE_BLE
+				BLE_power(0, NULL);
+				BLE_power(1, "Nano X");
+#endif // HAVE_BLE
 				zil_main();
 			}
 			CATCH(EXCEPTION_IO_RESET) {

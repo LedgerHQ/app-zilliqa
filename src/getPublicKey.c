@@ -20,11 +20,11 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include <os.h>
-#include <os_io_seproxyhal.h>
+#include "os.h"
+#include "os_io_seproxyhal.h"
 
 #include "glyphs.h"
-#include "ux.h"
+#include "zilliqa_ux.h"
 #include "zilliqa.h"
 #include "bech32_addr.h"
 

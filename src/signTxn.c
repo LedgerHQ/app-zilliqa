@@ -1,9 +1,10 @@
 #include <stdint.h>
 #include <stdbool.h>
-#include <os.h>
-#include <os_io_seproxyhal.h>
+
+#include "os.h"
+#include "os_io_seproxyhal.h"
 #include "zilliqa.h"
-#include "ux.h"
+#include "zilliqa_ux.h"
 #include "pb_decode.h"
 #include "txn.pb.h"
 #include "uint256.h"

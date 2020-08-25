@@ -19,10 +19,11 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include <os.h>
-#include <os_io_seproxyhal.h>
+#include "os.h"
+#include "os_io_seproxyhal.h"
+
 #include "zilliqa.h"
-#include "ux.h"
+#include "zilliqa_ux.h"
 
 // Get a pointer to signHash's state variables. This is purely for
 // convenience, so that we can refer to these variables concisely from any
