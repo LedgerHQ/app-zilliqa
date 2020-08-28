@@ -19,23 +19,35 @@ ifeq ($(BOLOS_SDK),)
 $(error Environment variable BOLOS_SDK is not set)
 endif
 
-SCRIPT_LD = script.ld
-
 include $(BOLOS_SDK)/Makefile.defines
 
 #########
 #  App  #
 #########
 
+ifeq ($(TARGET_NAME), TARGET_NANOS)
+SCRIPT_LD = script.ld
+endif
+
 APPNAME    = Zilliqa
+ifeq ($(TARGET_NAME), TARGET_NANOX)
+ICONNAME   = zilliqa-nano-x.gif
+else
 ICONNAME   = zilliqa-nano-s.gif
+endif
 APPVERSION = 0.4.1
 
 # The --path argument here restricts which BIP32 paths the app is allowed to derive.
 APP_LOAD_PARAMS = --path "44'/313'" --curve secp256k1 $(COMMON_LOAD_PARAMS)
-APP_LOAD_FLAGS  = --appFlags 0x40
+APP_LOAD_FLAGS  = --appFlags 0x240
 APP_SOURCE_PATH = src
 SDK_SOURCE_PATH = lib_stusb lib_stusb_impl lib_u2f
+
+ifeq ($(TARGET_NAME),TARGET_NANOX)
+SDK_SOURCE_PATH  += lib_blewbxx lib_blewbxx_impl
+SDK_SOURCE_PATH  += lib_ux
+DEFINES          += HAVE_UX_FLOW
+endif
 
 APP_LOAD_PARAMS += $(APP_LOAD_FLAGS)
 
@@ -56,10 +68,17 @@ delete:
 ############
 
 DEFINES += OS_IO_SEPROXYHAL IO_SEPROXYHAL_BUFFER_SIZE_B=256
-DEFINES += HAVE_BAGL
+DEFINES += HAVE_BAGL HAVE_SPRINTF HAVE_SNPRINTF_FORMAT_U
+
+# For enabling protobuf library to check for stackoverflow.
+# DEFINES += PB_CHECK_STACK_OVERFLOW
 
 ifdef DBG
-DEFINES += HAVE_SPRINTF HAVE_PRINTF PRINTF=screen_printf
+ifeq ($(TARGET_NAME),TARGET_NANOX)
+	DEFINES   += HAVE_PRINTF PRINTF=mcu_usb_printf
+else
+	DEFINES   += HAVE_PRINTF PRINTF=screen_printf
+endif
 DEFINES += HAVE_BOLOS_APP_STACK_CANARY
 else
 DEFINES += PRINTF\(...\)=
@@ -77,6 +96,18 @@ DEFINES   += BLE_SEGMENT_SIZE=32 #max MTU, min 20
 #WEBUSB_URL = www.ledgerwallet.com
 #DEFINES    += HAVE_WEBUSB WEBUSB_URL_SIZE_B=$(shell echo -n $(WEBUSB_URL) | wc -c) WEBUSB_URL=$(shell echo -n $(WEBUSB_URL) | sed -e "s/./\\\'\0\\\',/g")
 DEFINES   += HAVE_WEBUSB WEBUSB_URL_SIZE_B=0 WEBUSB_URL=""
+
+ifeq ($(TARGET_NAME),TARGET_NANOX)
+DEFINES   += HAVE_BLE BLE_COMMAND_TIMEOUT_MS=2000
+DEFINES   += HAVE_BLE_APDU # basic ledger apdu transport over BLE
+
+DEFINES   += HAVE_GLO096 HAVE_UX_LEGACY
+DEFINES   += HAVE_BAGL BAGL_WIDTH=128 BAGL_HEIGHT=64
+DEFINES   += HAVE_BAGL_ELLIPSIS # long label truncation feature
+DEFINES   += HAVE_BAGL_FONT_OPEN_SANS_REGULAR_11PX
+DEFINES   += HAVE_BAGL_FONT_OPEN_SANS_EXTRABOLD_11PX
+DEFINES   += HAVE_BAGL_FONT_OPEN_SANS_LIGHT_16PX
+endif
 
 ##############
 #  Compiler  #

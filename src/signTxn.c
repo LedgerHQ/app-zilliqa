@@ -1,15 +1,85 @@
 #include <stdint.h>
 #include <stdbool.h>
-#include <os.h>
-#include <os_io_seproxyhal.h>
+
+#include "os.h"
+#include "os_io_seproxyhal.h"
 #include "zilliqa.h"
-#include "ux.h"
+#include "zilliqa_ux.h"
 #include "pb_decode.h"
 #include "txn.pb.h"
 #include "uint256.h"
 #include "bech32_addr.h"
 
-static signTxnContext_t *ctx = &global.signTxnContext;
+static signTxnContext_t * const ctx = &global.signTxnContext;
+
+// Print the key index into the indexStr buffer. 
+static void prepareIndexStr(void)
+{
+		os_memmove(ctx->indexStr, "with Key #", 10);
+		int n = bin64b2dec(ctx->indexStr+10, sizeof(ctx->indexStr)-10, ctx->keyIndex);
+		// We copy two bytes so as to include the terminating '\0' byte for the string.
+		os_memmove(ctx->indexStr+10+n, "?", 2);
+}
+
+#ifdef HAVE_UX_FLOW
+
+static void do_approve(const bagl_element_t *e)
+{
+		assert(IO_APDU_BUFFER_SIZE >= SCHNORR_SIG_LEN_RS);
+		os_memcpy(G_io_apdu_buffer, ctx->signature, SCHNORR_SIG_LEN_RS);
+		// Send the data in the APDU buffer, which is a 64 byte signature.
+		io_exchange_with_code(SW_OK, SCHNORR_SIG_LEN_RS);
+		// Return to the main screen.
+		ui_idle();
+}
+
+static void do_reject(const bagl_element_t *e)
+{
+    io_exchange_with_code(SW_USER_REJECTED, 0);
+    ui_idle();
+}
+
+UX_FLOW_DEF_NOCB(
+    ux_signmsg_flow_1_step,
+    pnn,
+    {
+      &C_icon_certificate,
+      "Sign Txn",
+			(char *) ctx->indexStr,
+    });
+UX_FLOW_DEF_NOCB(
+    ux_signmsg_flow_2_step,
+    bnnn_paging,
+    {
+      .title = "Txn",
+      .text = (char *) ctx->msg,
+    });
+UX_FLOW_DEF_VALID(
+    ux_signmsg_flow_3_step,
+    pn,
+    do_approve(NULL),
+    {
+      &C_icon_validate_14,
+      "Sign",
+    });
+UX_FLOW_DEF_VALID(
+    ux_signmsg_flow_4_step,
+    pn,
+    do_reject(NULL),
+    {
+      &C_icon_crossmark,
+      "Cancel",
+    });
+
+const ux_flow_step_t *        const ux_signmsg_flow [] = {
+  &ux_signmsg_flow_1_step,
+  &ux_signmsg_flow_2_step,
+  &ux_signmsg_flow_3_step,
+  &ux_signmsg_flow_4_step,
+  FLOW_END_STEP,
+};
+
+#else
 
 // Define the approval screen. This is where the user will confirm that they
 // want to sign the hash. This UI layout is very common: a background, two
@@ -163,12 +233,6 @@ static unsigned int ui_signHash_compare_button(unsigned int button_mask, unsigne
 		break;
 
 	case BUTTON_EVT_RELEASED | BUTTON_LEFT | BUTTON_RIGHT: // PROCEED
-		// Prepare to display the approval screen by printing the key index
-		// into the indexStr buffer. We copy two bytes in the final os_memmove
-		// so as to include the terminating '\0' byte for the string.
-		os_memmove(ctx->indexStr, "with Key #", 10);
-		int n = bin64b2dec(ctx->indexStr+10, sizeof(ctx->indexStr)-10, ctx->keyIndex);
-		os_memmove(ctx->indexStr+10+n, "?", 2);
 		// Note that because the approval screen does not have a preprocessor,
 		// we must pass NULL.
 		UX_DISPLAY(ui_signHash_approve, NULL);
@@ -179,10 +243,12 @@ static unsigned int ui_signHash_compare_button(unsigned int button_mask, unsigne
 	return 0;
 }
 
+#endif // HAVE_UX_FLOW
+
 // Append msg to ctx->msg for display. THROW if out of memory.
 static void inline append_ctx_msg (signTxnContext_t *ctx, const char* msg, int msg_len)
 {
-	if (ctx->msgLen + msg_len >= sizeof(ctx->msg)) {
+	if (ctx->msgLen + msg_len >= TXN_DISP_MSG_MAX_LEN) {
 		FAIL("Display memory full");
 	}
 	
@@ -200,7 +266,7 @@ bool istream_callback (pb_istream_t *stream, pb_byte_t *buf, size_t count)
 	int sdbufRem = sd->len - sd->nextIdx;
 	if (sdbufRem > 0) {
 		// We have some data to spare.
-		int copylen = MIN(sdbufRem, count);
+		int copylen = MIN(sdbufRem, (int)count);
 		os_memcpy(buf, sd->buf + sd->nextIdx, copylen);
 		count -= copylen;
 		bufNext += copylen;
@@ -254,12 +320,13 @@ bool decode_txn_data (pb_istream_t *stream, const pb_field_t *field, void **arg)
 {
 	size_t jsonLen = stream->bytes_left;
 	PRINTF("decode_txn_data: data length=%d\n", jsonLen);
-	if (jsonLen + ctx->msgLen > sizeof(ctx->msg)) {
+	if (jsonLen + ctx->msgLen > TXN_DISP_MSG_MAX_LEN) {
 		PRINTF("decode_txn_data: Cannot decode txn, too large.\n");
 		// We can't do anything but just consume the data.
 		if (!pb_read(stream, NULL, jsonLen)) {
 			FAIL("pb_read failed during txn data decode");
 		}
+		return true;
 	}
 
 	PRINTF("decode_txn_data: Displaying raw JSON of length %d\n", jsonLen);
@@ -320,7 +387,7 @@ static bool decode_callback (pb_istream_t *stream, const pb_field_t *field, void
 		// Write data for display.
 		append_ctx_msg(ctx, tagread, strlen(tagread));
 		if (readlen == PUB_ADDR_BYTES_LEN) {
-			if (!bech32_addr_encode(buf2, "zil", buf, PUB_ADDR_BYTES_LEN)) {
+			if (!bech32_addr_encode(buf2, "zil", (uint8_t*) buf, PUB_ADDR_BYTES_LEN)) {
 				FAIL ("bech32 encoding of sendto address failed");
 			}
 			CHECK_CANARY;
@@ -372,7 +439,7 @@ static bool decode_callback (pb_istream_t *stream, const pb_field_t *field, void
 }
 // Sign the txn, also deserializes parts of it. May call io_exchange multiple times.
 // Output: 1. Display message will be populated in ctx->msg.
-//         2. Signature will be populated in ctx->sdgnature.
+//         2. Signature will be populated in ctx->signature.
 static bool sign_deserialize_stream(const uint8_t *txn1, int txn1Len, int hostBytesLeft)
 {
 	// Initialize stream data.
@@ -432,6 +499,9 @@ void handleSignTxn(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t dataLen
 
   // Read the various integers at the beginning.
 	ctx->keyIndex = U4LE(dataBuffer, dataIndexOffset);
+	// Generate a string for the index.
+	prepareIndexStr();
+
 	PRINTF("handleSignTxn: keyIndex: %d \n", ctx->keyIndex);
 	hostBytesLeft = U4LE(dataBuffer, dataHostBytesLeftOffset);
 	PRINTF("handleSignTxn: hostBytesLeft: %d \n", hostBytesLeft);
@@ -447,6 +517,16 @@ void handleSignTxn(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t dataLen
 	if (!sign_deserialize_stream(dataBuffer + dataOffset, txnLen, hostBytesLeft)) {
 		FAIL("sign_deserialize_stream failed");
 	}
+	PRINTF("msg:    %.*H \n", ctx->msgLen, ctx->msg);
+
+#ifdef HAVE_UX_FLOW
+	// Ensure we have one byte for '\0'
+	assert(sizeof(ctx->msg) >= TXN_DISP_MSG_MAX_LEN+1);
+	assert(ctx->msgLen <= TXN_DISP_MSG_MAX_LEN);
+	ctx->msg[ctx->msgLen] = '\0';
+
+	ux_flow_init(0, ux_signmsg_flow, NULL);
+#else
 
 	// Prepare to display the comparison screen by converting the hash to hex
 	// and moving the first 12 characters into the partialMsg buffer.
@@ -454,13 +534,13 @@ void handleSignTxn(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t dataLen
 	ctx->partialMsg[12] = '\0';
 	ctx->displayIndex = 0;
 
-	PRINTF("msg:    %.*H \n", ctx->msgLen, ctx->msg);
-
 	// Call UX_DISPLAY to display the comparison screen, passing the
 	// corresponding preprocessor. You might ask: Why doesn't UX_DISPLAY
 	// also take the button handler as an argument, instead of using macro
 	// magic? To which I can only reply: ¯\_(ツ)_/¯
 	UX_DISPLAY(ui_signHash_compare, ui_prepro_signHash_compare);
+
+#endif // HAVE_UX_FLOW
 
 	// Set the IO_ASYNC_REPLY flag. This flag tells zil_main that we aren't
 	// sending data to the computer immediately; we need to wait for a button
