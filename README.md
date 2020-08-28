@@ -96,5 +96,5 @@ Delete the Zilliqa app
   - Alternatively, just run `make delete`
 
 Install `app.hex` to the device
-  - (ledgerenv)...`$python -m ledgerblue.loadApp --path "44'/313'"  --curve "secp256k1" --tlv --targetId "0x31100004" --delete --fileName "app.hex" --appName "Zilliqa" --appVersion "0.4.1" --appFlags "0x240"`
+  - (ledgerenv)...`$python -m ledgerblue.loadApp --path "44'/313'"  --curve "secp256k1" --tlv --targetId "0x31100004" --delete --fileName "app.hex" --appName "Zilliqa" --appFlags "0x240"`
   - Alternatively, just run `make load`
