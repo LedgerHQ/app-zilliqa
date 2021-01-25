@@ -4,6 +4,7 @@
 #include "schnorr.h"
 #include "zilliqa.h"
 #include "txn.pb.h"
+#include "ux.h"
 
 #define TXN_BUF_SIZE 256
 #define TXN_DISP_MSG_MAX_LEN 512
