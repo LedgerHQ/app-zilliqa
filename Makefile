@@ -26,7 +26,7 @@ include $(BOLOS_SDK)/Makefile.defines
 #########
 
 ifeq ($(TARGET_NAME), TARGET_NANOS)
-SCRIPT_LD = script.ld
+APP_STACK_SIZE:=1024
 endif
 
 APPNAME    = Zilliqa
