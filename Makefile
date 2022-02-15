@@ -30,10 +30,10 @@ APP_STACK_SIZE:=1024
 endif
 
 APPNAME    = Zilliqa
-ifeq ($(TARGET_NAME), TARGET_NANOX)
-ICONNAME   = zilliqa-nano-x.gif
-else
+ifeq ($(TARGET_NAME), TARGET_NANOS)
 ICONNAME   = zilliqa-nano-s.gif
+else
+ICONNAME   = zilliqa-nano-x.gif
 endif
 APPVERSION = 0.4.4
 
@@ -45,6 +45,9 @@ SDK_SOURCE_PATH = lib_stusb lib_stusb_impl lib_u2f
 
 ifeq ($(TARGET_NAME),TARGET_NANOX)
 SDK_SOURCE_PATH  += lib_blewbxx lib_blewbxx_impl
+endif
+
+ifneq ($(TARGET_NAME),TARGET_NANOS)
 SDK_SOURCE_PATH  += lib_ux
 DEFINES          += HAVE_UX_FLOW
 endif
@@ -74,7 +77,7 @@ DEFINES += HAVE_BAGL HAVE_SPRINTF HAVE_SNPRINTF_FORMAT_U
 # DEFINES += PB_CHECK_STACK_OVERFLOW
 
 ifdef DBG
-ifeq ($(TARGET_NAME),TARGET_NANOX)
+ifneq ($(TARGET_NAME),TARGET_NANOS)
 	DEFINES   += HAVE_PRINTF PRINTF=mcu_usb_printf
 else
 	DEFINES   += HAVE_PRINTF PRINTF=screen_printf
@@ -100,7 +103,9 @@ DEFINES   += HAVE_WEBUSB WEBUSB_URL_SIZE_B=0 WEBUSB_URL=""
 ifeq ($(TARGET_NAME),TARGET_NANOX)
 DEFINES   += HAVE_BLE BLE_COMMAND_TIMEOUT_MS=2000
 DEFINES   += HAVE_BLE_APDU # basic ledger apdu transport over BLE
+endif
 
+ifneq ($(TARGET_NAME),TARGET_NANOS)
 DEFINES   += HAVE_GLO096 HAVE_UX_LEGACY
 DEFINES   += HAVE_BAGL BAGL_WIDTH=128 BAGL_HEIGHT=64
 DEFINES   += HAVE_BAGL_ELLIPSIS # long label truncation feature
