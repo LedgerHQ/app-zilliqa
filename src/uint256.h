@@ -23,9 +23,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-typedef struct uint128_t { uint64_t elements[2]; } uint128_t;
+typedef struct uint128_t { uint64_t elements[2]; } __attribute__((__packed__)) uint128_t;
 
-typedef struct uint256_t { uint128_t elements[2]; } uint256_t;
+typedef struct uint256_t { uint128_t elements[2]; } __attribute__((__packed__)) uint256_t;
 
 #define UPPER_P(x) x->elements[0]
 #define LOWER_P(x) x->elements[1]
