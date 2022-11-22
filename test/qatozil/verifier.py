@@ -1,7 +1,8 @@
 #!/usr/bin/python
 
-import sys
 import decimal
+import sys
+
 
 # https://stackoverflow.com/a/44702621/2128804
 def floatToString(inputValue, shift):

@@ -1,9 +1,9 @@
-#include <stdio.h>
 #include <assert.h>
-#include <string.h>
 #include <ctype.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 /* "0." +  39 digits in UINT128_MAX + '\0' */
 #define MAX_BUF_LEN 42
@@ -11,10 +11,11 @@
 #define QA_ZIL_SHIFT 12
 #define QA_LI_SHIFT 6
 
-/* Filter out leading zero's and non-digit characters in a null terminated string. */
+/* Filter out leading zero's and non-digit characters in a null terminated
+ * string. */
 void cleanse_input(char *buf) {
   int len = strlen(buf);
-  assert (len < MAX_BUF_LEN);
+  assert(len < MAX_BUF_LEN);
   int nextpos = 0;
   bool seen_nonzero = false;
 
@@ -28,7 +29,7 @@ void cleanse_input(char *buf) {
       buf[nextpos++] = c;
     }
   }
-  assert (nextpos <= len);
+  assert(nextpos <= len);
 
   if (nextpos == 0)
     buf[nextpos++] = '0';
@@ -37,12 +38,11 @@ void cleanse_input(char *buf) {
 }
 
 /* Removing trailing 0s and ".". */
-void remove_trailing_zeroes(char *buf)
-{
+void remove_trailing_zeroes(char *buf) {
   int len = strlen(buf);
   assert(len < MAX_BUF_LEN);
 
-  for (int i = len-1; i >= 0; i--) {
+  for (int i = len - 1; i >= 0; i--) {
     if (buf[i] == '0')
       buf[i] = '\0';
     else if (buf[i] == '.') {
@@ -56,8 +56,7 @@ void remove_trailing_zeroes(char *buf)
 
 /* Given a null terminated sequence of digits (value < UINT128_MAX),
  * divide it by "shift" and pretty print the result. */
-void ToZil(char *input, char *output, int shift)
-{
+void ToZil(char *input, char *output, int shift) {
   int len = strlen(input);
   assert(len > 0 && len < MAX_BUF_LEN);
 
@@ -83,9 +82,7 @@ void ToZil(char *input, char *output, int shift)
   remove_trailing_zeroes(output);
 }
 
-
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
   char qabuf[MAX_BUF_LEN], zilbuf[MAX_BUF_LEN];
 
   int shift;
@@ -96,7 +93,9 @@ int main(int argc, char *argv[])
     shift = atoi(argv[2]);
     strcpy(qabuf, argv[3]);
   } else {
-    fprintf(stderr, "Usage:./qatozil [-shift=%d] Qa (length of Qa <= 39 digits)\n", QA_ZIL_SHIFT);
+    fprintf(stderr,
+            "Usage:./qatozil [-shift=%d] Qa (length of Qa <= 39 digits)\n",
+            QA_ZIL_SHIFT);
     exit(1);
   }
 

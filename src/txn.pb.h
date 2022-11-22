@@ -16,48 +16,68 @@ extern "C" {
 
 /* Struct definitions */
 typedef struct _ByteArray {
-    pb_callback_t data;
-/* @@protoc_insertion_point(struct:ByteArray) */
+  pb_callback_t data;
+  /* @@protoc_insertion_point(struct:ByteArray) */
 } ByteArray;
 
 typedef struct _ProtoTransactionCoreInfo {
-    bool has_version;
-    uint32_t version;
-    bool has_nonce;
-    uint64_t nonce;
-    pb_callback_t toaddr;
-    bool has_senderpubkey;
-    ByteArray senderpubkey;
-    bool has_amount;
-    ByteArray amount;
-    bool has_gasprice;
-    ByteArray gasprice;
-    bool has_gaslimit;
-    uint64_t gaslimit;
-    pb_callback_t code;
-    pb_callback_t data;
-/* @@protoc_insertion_point(struct:ProtoTransactionCoreInfo) */
+  bool has_version;
+  uint32_t version;
+  bool has_nonce;
+  uint64_t nonce;
+  pb_callback_t toaddr;
+  bool has_senderpubkey;
+  ByteArray senderpubkey;
+  bool has_amount;
+  ByteArray amount;
+  bool has_gasprice;
+  ByteArray gasprice;
+  bool has_gaslimit;
+  uint64_t gaslimit;
+  pb_callback_t code;
+  pb_callback_t data;
+  /* @@protoc_insertion_point(struct:ProtoTransactionCoreInfo) */
 } ProtoTransactionCoreInfo;
 
 /* Default values for struct fields */
 
 /* Initializer values for message structs */
-#define ByteArray_init_default                   {{{NULL}, NULL}}
-#define ProtoTransactionCoreInfo_init_default    {false, 0, false, 0, {{NULL}, NULL}, false, ByteArray_init_default, false, ByteArray_init_default, false, ByteArray_init_default, false, 0, {{NULL}, NULL}, {{NULL}, NULL}}
-#define ByteArray_init_zero                      {{{NULL}, NULL}}
-#define ProtoTransactionCoreInfo_init_zero       {false, 0, false, 0, {{NULL}, NULL}, false, ByteArray_init_zero, false, ByteArray_init_zero, false, ByteArray_init_zero, false, 0, {{NULL}, NULL}, {{NULL}, NULL}}
+#define ByteArray_init_default                                                 \
+  {                                                                            \
+    { {NULL}, NULL }                                                           \
+  }
+#define ProtoTransactionCoreInfo_init_default                                  \
+  {                                                                            \
+    false, 0, false, 0, {{NULL}, NULL}, false, ByteArray_init_default, false,  \
+        ByteArray_init_default, false, ByteArray_init_default, false, 0,       \
+        {{NULL}, NULL}, {                                                      \
+      {NULL}, NULL                                                             \
+    }                                                                          \
+  }
+#define ByteArray_init_zero                                                    \
+  {                                                                            \
+    { {NULL}, NULL }                                                           \
+  }
+#define ProtoTransactionCoreInfo_init_zero                                     \
+  {                                                                            \
+    false, 0, false, 0, {{NULL}, NULL}, false, ByteArray_init_zero, false,     \
+        ByteArray_init_zero, false, ByteArray_init_zero, false, 0,             \
+        {{NULL}, NULL}, {                                                      \
+      {NULL}, NULL                                                             \
+    }                                                                          \
+  }
 
 /* Field tags (for use in manual encoding/decoding) */
-#define ByteArray_data_tag                       1
-#define ProtoTransactionCoreInfo_version_tag     1
-#define ProtoTransactionCoreInfo_nonce_tag       2
-#define ProtoTransactionCoreInfo_toaddr_tag      3
+#define ByteArray_data_tag 1
+#define ProtoTransactionCoreInfo_version_tag 1
+#define ProtoTransactionCoreInfo_nonce_tag 2
+#define ProtoTransactionCoreInfo_toaddr_tag 3
 #define ProtoTransactionCoreInfo_senderpubkey_tag 4
-#define ProtoTransactionCoreInfo_amount_tag      5
-#define ProtoTransactionCoreInfo_gasprice_tag    6
-#define ProtoTransactionCoreInfo_gaslimit_tag    7
-#define ProtoTransactionCoreInfo_code_tag        8
-#define ProtoTransactionCoreInfo_data_tag        9
+#define ProtoTransactionCoreInfo_amount_tag 5
+#define ProtoTransactionCoreInfo_gasprice_tag 6
+#define ProtoTransactionCoreInfo_gaslimit_tag 7
+#define ProtoTransactionCoreInfo_code_tag 8
+#define ProtoTransactionCoreInfo_data_tag 9
 
 /* Struct field encoding specification for nanopb */
 extern const pb_field_t ByteArray_fields[2];
@@ -70,8 +90,7 @@ extern const pb_field_t ProtoTransactionCoreInfo_fields[10];
 /* Message IDs (where set with "msgid" option) */
 #ifdef PB_MSGID
 
-#define TXN_MESSAGES \
-
+#define TXN_MESSAGES
 
 #endif
 

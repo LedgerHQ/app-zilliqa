@@ -6,12 +6,12 @@
 // These are the offsets of various parts of a request APDU packet. INS
 // identifies the requested command (see above), and P1 and P2 are parameters
 // to the command.
-#define CLA          0xE0
-#define OFFSET_CLA   0x00
-#define OFFSET_INS   0x01
-#define OFFSET_P1    0x02
-#define OFFSET_P2    0x03
-#define OFFSET_LC    0x04
+#define CLA 0xE0
+#define OFFSET_CLA 0x00
+#define OFFSET_INS 0x01
+#define OFFSET_P1 0x02
+#define OFFSET_P2 0x03
+#define OFFSET_LC 0x04
 #define OFFSET_CDATA 0x05
 
 // Use Zilliqa's DER decode function for signing?
@@ -20,34 +20,41 @@
 
 // MACROS
 #define PLOC() PRINTF("\n%s - %s:%d \n", __FILE__, __func__, __LINE__);
-#define assert(x) \
-    if (x) {} else { PLOC(); PRINTF("Assertion failed\n"); THROW (EXCEPTION); }
-#define FAIL(x) \
-    { \
-        PLOC();\
-        PRINTF("Zilliqa ledger app failed: %s\n", x);\
-        THROW(EXCEPTION); \
-    }
+#define assert(x)                                                              \
+  if (x) {                                                                     \
+  } else {                                                                     \
+    PLOC();                                                                    \
+    PRINTF("Assertion failed\n");                                              \
+    THROW(EXCEPTION);                                                          \
+  }
+#define FAIL(x)                                                                \
+  {                                                                            \
+    PLOC();                                                                    \
+    PRINTF("Zilliqa ledger app failed: %s\n", x);                              \
+    THROW(EXCEPTION);                                                          \
+  }
 
 #ifdef HAVE_BOLOS_APP_STACK_CANARY
 // This symbol is defined by the link script to be at the start of the stack
 // area.
 extern unsigned long _stack, _estack;
-#define STACK_CANARY (*((volatile uint32_t*) &_stack))
+#define STACK_CANARY (*((volatile uint32_t *)&_stack))
 
 void print_available_stack();
 
-#define INIT_CANARY                                              \
-  STACK_CANARY = 0xDEADBEEF;                                     \
-  PLOC();                                                        \
-  PRINTF("init_canary: initialized at STACK_START 0x%p and STACK_END 0x%p with STACK_SIZE=%d\n", \
-  &_stack, &_estack, ((uintptr_t)&_estack) - ((uintptr_t)&_stack)); \
+#define INIT_CANARY                                                            \
+  STACK_CANARY = 0xDEADBEEF;                                                   \
+  PLOC();                                                                      \
+  PRINTF("init_canary: initialized at STACK_START 0x%p and STACK_END 0x%p "    \
+         "with STACK_SIZE=%d\n",                                               \
+         &_stack, &_estack, ((uintptr_t)&_estack) - ((uintptr_t)&_stack));     \
   print_available_stack();
 
-#define CHECK_CANARY                             \
-  if (STACK_CANARY != 0xDEADBEEF)                \
-    FAIL("check_canary: EXCEPTION_OVERFLOW");    \
-  PLOC(); print_available_stack();               \
+#define CHECK_CANARY                                                           \
+  if (STACK_CANARY != 0xDEADBEEF)                                              \
+    FAIL("check_canary: EXCEPTION_OVERFLOW");                                  \
+  PLOC();                                                                      \
+  print_available_stack();                                                     \
   PRINTF("check_canary: successfull\n");
 
 #else
@@ -56,7 +63,6 @@ void print_available_stack();
 #define CHECK_CANARY
 
 #endif // HAVE_BOLOS_APP_STACK_CANARY
-
 
 // Constants
 #define SHA256_HASH_LEN 32
@@ -78,11 +84,15 @@ void print_available_stack();
 #define SW_INVALID_PARAM 0x6B01
 #define SW_IMPROPER_INIT 0x6B02
 #define SW_USER_REJECTED 0x6985
-#define SW_OK            0x9000
+#define SW_OK 0x9000
 
 // macros for converting raw bytes to uint64_t
-#define U8BE(buf, off) (((uint64_t)(U4BE(buf, off))     << 32) | ((uint64_t)(U4BE(buf, off + 4)) & 0xFFFFFFFF))
-#define U8LE(buf, off) (((uint64_t)(U4LE(buf, off + 4)) << 32) | ((uint64_t)(U4LE(buf, off))     & 0xFFFFFFFF))
+#define U8BE(buf, off)                                                         \
+  (((uint64_t)(U4BE(buf, off)) << 32) |                                        \
+   ((uint64_t)(U4BE(buf, off + 4)) & 0xFFFFFFFF))
+#define U8LE(buf, off)                                                         \
+  (((uint64_t)(U4LE(buf, off + 4)) << 32) |                                    \
+   ((uint64_t)(U4LE(buf, off)) & 0xFFFFFFFF))
 
 // FUNCTIONS
 
@@ -96,20 +106,24 @@ void pubkeyToZilAddress(uint8_t *dst, cx_ecfp_public_key_t *publicKey);
 // seed. Returns the public key (private key is not needed).
 void deriveZilPubKey(uint32_t index, cx_ecfp_public_key_t *publicKey);
 
-// Three functions to stream the signature process. See deriveAndSign to do in a single operation.
+// Three functions to stream the signature process. See deriveAndSign to do in a
+// single operation.
 void deriveAndSignInit(zil_ecschnorr_t *T, uint32_t index);
-void deriveAndSignContinue(zil_ecschnorr_t *T, const uint8_t *msg, unsigned int msg_len);
-int deriveAndSignFinish(zil_ecschnorr_t *T, uint32_t index, unsigned char *dst, unsigned int dst_len);
+void deriveAndSignContinue(zil_ecschnorr_t *T, const uint8_t *msg,
+                           unsigned int msg_len);
+int deriveAndSignFinish(zil_ecschnorr_t *T, uint32_t index, unsigned char *dst,
+                        unsigned int dst_len);
 
-// deriveAndSign derives an ECFP private key from an user specified index and the Ledger seed,
-// and uses it to produce a SCHNORR_SIG_LEN_RS length signature of the provided message
-// The key is cleared from memory after signing.
-void deriveAndSign(uint8_t *dst, uint32_t dst_len, uint32_t index, const uint8_t *msg, unsigned int msg_len);
+// deriveAndSign derives an ECFP private key from an user specified index and
+// the Ledger seed, and uses it to produce a SCHNORR_SIG_LEN_RS length signature
+// of the provided message The key is cleared from memory after signing.
+void deriveAndSign(uint8_t *dst, uint32_t dst_len, uint32_t index,
+                   const uint8_t *msg, unsigned int msg_len);
 
 // Converts a null-terminated buffer containing Qa to Zil / Li
 // assert (zil/li_buf_len >= ZIL_UINT128_BUF_LEN);
-void qa_to_zil(const char* qa, char* zil_buf, int zil_buf_len);
-void qa_to_li(const char* qa, char* li_buf, int li_buf_len);
+void qa_to_zil(const char *qa, char *zil_buf, int zil_buf_len);
+void qa_to_li(const char *qa, char *li_buf, int li_buf_len);
 
 // BYTE UTILS
 
@@ -124,6 +138,5 @@ int bin64b2dec(uint8_t *dst, uint32_t dst_len, uint64_t n);
 // to byte sequence and place in "bin" (which must be allocated
 // with at least numhexchar/2 bytes already).
 void hex2bin(const uint8_t *hexstr, unsigned numhexchars, uint8_t *bin);
-
 
 #endif

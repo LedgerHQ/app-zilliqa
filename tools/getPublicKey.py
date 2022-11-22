@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 
-from ledgerblue.comm import getDongle
-from ledgerblue.commException import CommException
 import argparse
 import struct
+
+from ledgerblue.comm import getDongle
+from ledgerblue.commException import CommException
+
 
 def apduPrefix(args):
     # https://en.wikipedia.org/wiki/Smart_card_application_protocol_data_unit

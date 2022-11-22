@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 
-from ledgerblue.comm import getDongle
-from ledgerblue.commException import CommException
 import argparse
 import struct
+
+from ledgerblue.comm import getDongle
+from ledgerblue.commException import CommException
 
 # Generated from Zilliqa-Js library:
 # encodeTransactionProto({

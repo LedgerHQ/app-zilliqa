@@ -10,12 +10,11 @@
 # Set this to the downloaded nanopb path (absolute path only).
 NANOPB_PATH=""
 
-if [[ $NANOPB_PATH = "" ]]
-then
-    echo "Error: NANOPB_PATH not set in script"
-    exit 1
+if [[ $NANOPB_PATH == "" ]]; then
+	echo "Error: NANOPB_PATH not set in script"
+	exit 1
 fi
-    
+
 # Compile the protobuf description
 protoc -otxn.pb txn.proto
 

@@ -2,6 +2,7 @@
 
 from ledgerblue.comm import getDongle
 
+
 def apduPrefix():
     # https://en.wikipedia.org/wiki/Smart_card_application_protocol_data_unit
     CLA = bytes.fromhex("E0")
