@@ -2,7 +2,7 @@
 
 Zilliqa wallet application for Nano S.
 
-## New Build Instructions
+## Development Environment
 
 To build environment:
 
@@ -13,14 +13,30 @@ docker build .  --tag builder_image
 To start developing:
 
 ```sh
-docker run -it -v $PWD:/ledger-app/app builder_image:latest bash
+docker run -it -v $PWD:/ledger-app/app --privileged -v /dev/bus/usb:/dev/bus/usb builder_image:latest bash
 ```
+
+## Inside Dev Environment
 
 To build app:
 
 ```sh
 make clean && make
 ```
+
+To load the app:
+
+```sh
+make load
+```
+
+To uninstall
+
+```sh
+make delete
+```
+
+# Old instructions
 
 ## Build
 

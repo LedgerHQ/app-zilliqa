@@ -25,6 +25,8 @@ RUN git clone https://github.com/LedgerHQ/nanos-secure-sdk && \
 	wget https://launchpad.net/gcc-arm-embedded/5.0/5-2016-q1-update/+download/gcc-arm-none-eabi-5_3-2016q1-20160330-linux.tar.bz2 && \
 	mkdir devenv; tar -xvjf gcc-arm-none-eabi-5_3-2016q1-20160330-linux.tar.bz2 --directory devenv
 
+RUN ln -s /usr/bin/python3 /usr/bin/python
+
 ENV BOLOS_SDK=/ledger-app/nanos-secure-sdk/
 ENV GCCPATH=/ledger-app/devenv/gcc-arm-none-eabi-5_3-2016q1/bin/	
 ENV PATH=/ledger-app/devenv/gcc-arm-none-eabi-5_3-2016q1/bin/:$PATH
