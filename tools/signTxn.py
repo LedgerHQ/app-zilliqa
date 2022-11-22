@@ -18,6 +18,7 @@ from ledgerblue.commException import CommException
 # })
 EncodedTxn = "08818004100d1a148ad0357ebb5515f694de597eda6f3f6bdbad0fd922230a210205273e54f262f8717a687250591dcfb5755b8ce4e3bd340c7abefd0de12765742a120a100000000000000000000000000000006432120a100000000000000000000000003b9aca003801"
 
+
 def apduPrefix():
     # https://en.wikipedia.org/wiki/Smart_card_application_protocol_data_unit
     CLA = bytes.fromhex("E0")
@@ -29,7 +30,7 @@ def apduPrefix():
 
 
 def main(args):
-    STREAM_LEN = 16 # Stream in batches of STREAM_LEN bytes each.
+    STREAM_LEN = 16  # Stream in batches of STREAM_LEN bytes each.
     indexBytes = struct.pack("<I", args.index)
     txnBytes = bytearray.fromhex(EncodedTxn)
 
@@ -80,9 +81,10 @@ def main(args):
     print("Response: " + result.hex())
     print("Length: " + str(len(result)))
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    #parser.add_argument('--txnJson', '-j', type=str, required=False)
-    parser.add_argument('--index', '-i', type=int, required=True)
+    # parser.add_argument('--txnJson', '-j', type=str, required=False)
+    parser.add_argument("--index", "-i", type=int, required=True)
     args = parser.parse_args()
     main(args)

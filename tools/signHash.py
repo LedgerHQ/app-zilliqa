@@ -15,6 +15,7 @@ def apduPrefix():
     P2 = b"\x00"
     return CLA + INS + P1 + P2
 
+
 def main(args):
     indexBytes = struct.pack("<I", args.index)
 
@@ -37,7 +38,7 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--mhash', '-m', type=str, required=True)
-    parser.add_argument('--index', '-i', type=int, required=True)
+    parser.add_argument("--mhash", "-m", type=str, required=True)
+    parser.add_argument("--index", "-i", type=int, required=True)
     args = parser.parse_args()
     main(args)

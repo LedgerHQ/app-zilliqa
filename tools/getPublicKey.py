@@ -29,7 +29,7 @@ def main(args):
     pubKey = response[0:33]
     pubAddr = response[33:]
     if args.dispAddr:
-        print("Address:", str(pubAddr, 'utf-8'))
+        print("Address:", str(pubAddr, "utf-8"))
         print("length: ", len(pubAddr))
     else:
         print("Public Key:", pubKey.hex())
@@ -38,7 +38,7 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--index', '-i', type=int, required=True)
-    parser.add_argument('--dispAddr', '-a', type=bool, required=False)
+    parser.add_argument("--index", "-i", type=int, required=True)
+    parser.add_argument("--dispAddr", "-a", type=bool, required=False)
     args = parser.parse_args()
     main(args)

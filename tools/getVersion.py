@@ -11,9 +11,11 @@ def apduPrefix():
     P2 = b"\x00"
     return CLA + INS + P1 + P2
 
+
 def exchange(apdu):
     dongle = getDongle(True)
     return dongle.exchange(apdu)
+
 
 def main():
     apdu = apduPrefix()
@@ -21,6 +23,7 @@ def main():
     if len(response) != 3:
         raise "Invalid response length: {}".format(len(response))
     print("v{}.{}.{}".format(response[0], response[1], response[2]))
+
 
 if __name__ == "__main__":
     main()

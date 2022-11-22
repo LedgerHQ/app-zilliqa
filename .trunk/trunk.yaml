@@ -19,6 +19,7 @@ lint:
     - shfmt@3.5.0
     - isort@5.10.1
     - clang-format@14.0.0
+#    - clang-tidy@14.0.0 <- Disabled because we cannot extract compile commands
 runtimes:
   enabled:
     - go@1.18.3
