@@ -5,3 +5,5 @@ obj
 src/glyphs.c
 src/glyphs.h
 compile_commands.json
+._*
+**/._*
