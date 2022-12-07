@@ -18,7 +18,7 @@ For the sake of this setup, let us have a directory `$LEDGER_DIR` that contains 
 
 Install platform packages
 
-  - `$sudo apt-get install libudev-dev libusb-1.0-0-dev python3-dev python3-venv gcc-multilib g++-multilib clang pkg-config autoconf libtool libsecp256k1-dev`
+  - `$sudo apt-get install libudev-dev libusb-1.0-0-dev python3-dev python3-venv gcc-multilib g++-multilib clang pkg-config autoconf libtool libsecp256k1-dev libgmp3-dev`
 
 Setup a virtual python environment for the ledger libraries. For commands shown below, the presence of `(ledgerenv) ...` indicates that the command is being run in the virtual environment.
 
@@ -26,6 +26,7 @@ Setup a virtual python environment for the ledger libraries. For commands shown 
   - `$source ${LEDGER_DIR}/ledgerenv/bin/activate`
   - (ledgerenv) ... `$pip install ledgerblue`
   - (ledgerenv) ... `$pip install wheel`
+  - (ledgerenv) ... `$pip install -r tests/functional/requirements.txt`
   - (ledgerenv) ... `$SECP_BUNDLED_EXPERIMENTAL=1 pip --no-cache-dir install --no-binary secp256k1 secp256k1`
 
 Get Ledger toolchain related pre-requisites
