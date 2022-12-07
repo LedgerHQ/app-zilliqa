@@ -1,20 +1,22 @@
-#include <stdio.h>
-#include <assert.h>
-#include <string.h>
-#include <ctype.h>
 #include <stdbool.h>
-#include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
 
-/* "0." +  39 digits in UINT128_MAX + '\0' */
-#define MAX_BUF_LEN 42
+#include "qatozil.h"
+#ifndef UNIT_TESTS
+#include "zilliqa.h"
+#else
+#include <assert.h>
+#define CHECK_CANARY
+#endif
 
-#define QA_ZIL_SHIFT 12
-#define QA_LI_SHIFT 6
+int isdigit(int);
 
 /* Filter out leading zero's and non-digit characters in a null terminated string. */
-void cleanse_input(char *buf) {
+static void cleanse_input(char *buf)
+{
   int len = strlen(buf);
-  assert (len < MAX_BUF_LEN);
+  assert (len < ZIL_UINT128_BUF_LEN);
   int nextpos = 0;
   bool seen_nonzero = false;
 
@@ -37,10 +39,10 @@ void cleanse_input(char *buf) {
 }
 
 /* Removing trailing 0s and ".". */
-void remove_trailing_zeroes(char *buf)
+static void remove_trailing_zeroes(char *buf)
 {
   int len = strlen(buf);
-  assert(len < MAX_BUF_LEN);
+  assert(len < ZIL_UINT128_BUF_LEN);
 
   for (int i = len-1; i >= 0; i--) {
     if (buf[i] == '0')
@@ -54,12 +56,15 @@ void remove_trailing_zeroes(char *buf)
   }
 }
 
+#define QA_ZIL_SHIFT 12
+
 /* Given a null terminated sequence of digits (value < UINT128_MAX),
  * divide it by "shift" and pretty print the result. */
-void ToZil(char *input, char *output, int shift)
+static void ToZil(char *input, char *output, int shift)
 {
   int len = strlen(input);
-  assert(len > 0 && len < MAX_BUF_LEN);
+  assert(len > 0 && len < ZIL_UINT128_BUF_LEN);
+  assert(shift == QA_ZIL_SHIFT);
 
   if (len <= shift) {
     strcpy(output, "0.");
@@ -83,29 +88,18 @@ void ToZil(char *input, char *output, int shift)
   remove_trailing_zeroes(output);
 }
 
-
-int main(int argc, char *argv[])
+void qa_to_zil(const char* qa, char* zil_buf, int zil_buf_len)
 {
-  char qabuf[MAX_BUF_LEN], zilbuf[MAX_BUF_LEN];
+  int qa_len = strlen(qa);
+  assert(zil_buf_len >= ZIL_UINT128_BUF_LEN && qa_len < ZIL_UINT128_BUF_LEN);
 
-  int shift;
-  if (argc == 2) {
-    shift = QA_ZIL_SHIFT;
-    strcpy(qabuf, argv[1]);
-  } else if (argc == 4 && !strcmp(argv[1], "-shift") && strlen(argv[3]) <= 39) {
-    shift = atoi(argv[2]);
-    strcpy(qabuf, argv[3]);
-  } else {
-    fprintf(stderr, "Usage:./qatozil [-shift=%d] Qa (length of Qa <= 39 digits)\n", QA_ZIL_SHIFT);
-    exit(1);
-  }
+  char qa_buf[ZIL_UINT128_BUF_LEN];
 
+  CHECK_CANARY;
+  strcpy(qa_buf, qa);
   /* Cleanse the input. */
-  cleanse_input(qabuf);
+  cleanse_input(qa_buf);
   /* Convert Qa to Zil. */
-  ToZil(qabuf, zilbuf, shift);
-  /* Print output. */
-  printf("%s\n", zilbuf);
-
-  return 0;
+  ToZil(qa_buf, zil_buf, QA_ZIL_SHIFT);
+  CHECK_CANARY;
 }
