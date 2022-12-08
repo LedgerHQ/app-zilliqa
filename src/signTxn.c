@@ -22,8 +22,6 @@ static void prepareIndexStr(void)
 		os_memmove(ctx->indexStr+10+n, "?", 2);
 }
 
-#ifdef HAVE_UX_FLOW
-
 static void do_approve(const bagl_element_t *e)
 {
 		assert(IO_APDU_BUFFER_SIZE >= SCHNORR_SIG_LEN_RS);
@@ -79,172 +77,6 @@ const ux_flow_step_t *        const ux_signmsg_flow [] = {
   &ux_signmsg_flow_4_step,
   FLOW_END_STEP,
 };
-
-#else
-
-// Define the approval screen. This is where the user will confirm that they
-// want to sign the hash. This UI layout is very common: a background, two
-// buttons, and two lines of text.
-//
-// Screens are arrays of elements; the order of elements determines the order
-// in which they are rendered. Elements cannot be modified at runtime.
-static const bagl_element_t ui_signHash_approve[] = {
-	// The background; literally a black rectangle. This element must be
-	// defined first, so that the other elements render on top of it. Also, if
-	// your screen doesn't include a background, it will render directly on
-	// top of the previous screen.
-	UI_BACKGROUND(),
-
-	// Rejection/approval icons, represented by a cross and a check mark,
-	// respectively. The cross will be displayed on the far left of the
-	// screen, and the check on the far right, so as to indicate which button
-	// corresponds to each action.
-	UI_ICON_LEFT(0x00, BAGL_GLYPH_ICON_CROSS),
-	UI_ICON_RIGHT(0x00, BAGL_GLYPH_ICON_CHECK),
-
-	// The two lines of text, which together form a complete sentence:
-	//
-	//    Sign this Txn
-	//    with Key #123?
-	//
-	// Similar gotchas with signHash.c
-	UI_TEXT(0x00, 0, 12, 128, "Sign this Txn"),
-	UI_TEXT(0x00, 0, 26, 128, global.signTxnContext.indexStr)
-};
-
-static unsigned int ui_signHash_approve_button(unsigned int button_mask, unsigned int button_mask_counter) {
-
-	switch (button_mask) {
-	case BUTTON_EVT_RELEASED | BUTTON_LEFT: // REJECT
-		// Send an error code to the computer. The application on the computer
-		// should recognize this code and display a "user refused to sign"
-		// message instead of a generic error.
-		io_exchange_with_code(SW_USER_REJECTED, 0);
-		// Return to the main screen.
-		ui_idle();
-		break;
-
-	case BUTTON_EVT_RELEASED | BUTTON_RIGHT: // APPROVE
-		// store the signature in the APDU buffer.
-		os_memcpy(G_io_apdu_buffer, ctx->signature, SCHNORR_SIG_LEN_RS);
-		// Send the data in the APDU buffer, along with a special code that
-		// indicates approval. 64 is the number of bytes in the response APDU,
-		// sans response code.
-		io_exchange_with_code(SW_OK, SCHNORR_SIG_LEN_RS);
-		// Return to the main screen.
-		ui_idle();
-		break;
-	}
-	return 0;
-}
-
-// Define the comparison screen. This is where the user will compare the hash
-// on their device to the one shown on the computer. This UI is identical to
-// the approval screen, but with left/right buttons instead of reject/approve.
-static const bagl_element_t ui_signHash_compare[] = {
-	UI_BACKGROUND(),
-
-	// Left and right buttons for scrolling the text. The 0x01 and 0x02 are
-	// called userids; they allow the preprocessor (below) to know which
-	// element it's examining.
-	UI_ICON_LEFT(0x01, BAGL_GLYPH_ICON_LEFT),
-	UI_ICON_RIGHT(0x02, BAGL_GLYPH_ICON_RIGHT),
-
-	// Two lines of text: a header and the contents of the hash. We will be
-	// implementing a fancy scrollable text field, so the second line only
-	// needs to hold the currently-visible portion of the hash.
-	//
-	// Note that the userid of these fields is 0: this is a convention that
-	// most apps use to indicate that the element should always be displayed.
-	// UI_BACKGROUND() also has userid == 0. And if you revisit the approval
-	// screen, you'll see that all of those elements have userid == 0 as well.
-	UI_TEXT(0x00, 0, 12, 128, "Compare txn:"),
-	UI_TEXT(0x00, 0, 26, 128, global.signTxnContext.partialMsg),
-};
-
-// This is a "preprocessor" function that controls which elements of the
-// screen are displayed. This function is passed to UX_DISPLAY, which calls it
-// on each element of the screen. It should return NULL for elements that
-// should not be displayed, and otherwise return the element itself. Elements
-// can be identified by their userid.
-//
-// For the comparison screen, we use the preprocessor to make the scroll
-// buttons more intuitive: we only display them if there is more text hidden
-// off-screen.
-//
-// Note that we did not define a preprocessor for the approval screen. This is
-// because we always want to display every element of that screen. The
-// preprocessor acts a filter that selectively hides elements; since we did
-// not want to hide any elements, no preprocessor was necessary.
-static const bagl_element_t* ui_prepro_signHash_compare(const bagl_element_t *element) {
-	switch (element->component.userid) {
-	case 1:
-		// 0x01 is the left icon (see screen definition above), so return NULL
-		// if we're displaying the beginning of the text.
-		return (ctx->displayIndex == 0) ? NULL : element;
-	case 2:
-		// 0x02 is the right, so return NULL if we're displaying the end of the text.
-		return (ctx->displayIndex == ctx->msgLen - 12) ? NULL : element;
-	default:
-		// Always display all other elements.
-		return element;
-	}
-}
-
-// This is the button handler for the comparison screen. Unlike the approval
-// button handler, this handler doesn't send any data to the computer.
-static unsigned int ui_signHash_compare_button(unsigned int button_mask, unsigned int button_mask_counter) {
-	switch (button_mask) {
-	// The available button mask values are LEFT, RIGHT, EVT_RELEASED, and
-	// EVT_FAST. EVT_FAST is set when a button is held for 8 "ticks," i.e.
-	// 800ms.
-	//
-	// The comparison screens in the Zilliqa app allow the user to scroll using
-	// the left and right buttons. The user should be able to hold a button
-	// and scroll at a constant rate. When the user first presses the left
-	// button, we'll hit the LEFT case; after they've held the button for 8
-	// ticks, we'll hit the EVT_FAST | LEFT case. Since we want to scroll at a
-	// constant rate regardless, we handle both cases identically.
-	//
-	// Also note that, unlike the approval screen, we don't check for
-	// EVT_RELEASED. In fact, when a single button is released, none of the
-	// switch cases will be hit, so we'll stop scrolling.
-	case BUTTON_LEFT:
-	case BUTTON_EVT_FAST | BUTTON_LEFT: // SEEK LEFT
-		// Decrement the displayIndex when the left button is pressed (or held).
-		if (ctx->displayIndex > 0) {
-			ctx->displayIndex--;
-		}
-		// Use the displayIndex to recalculate the displayed portion of the
-		// text. os_memmove is the Ledger SDK's version of memmove (there is
-		// no os_memcpy). In practice, I don't think it matters whether you
-		// use os_memmove or the standard memmove from <string.h>.
-		os_memmove(ctx->partialMsg, ctx->msg + ctx->displayIndex, 12);
-		// Re-render the screen.
-		UX_REDISPLAY();
-		break;
-
-	case BUTTON_RIGHT:
-	case BUTTON_EVT_FAST | BUTTON_RIGHT: // SEEK RIGHT
-		if (ctx->displayIndex < ctx->msgLen-12) {
-			ctx->displayIndex++;
-		}
-		os_memmove(ctx->partialMsg, ctx->msg + ctx->displayIndex, 12);
-		UX_REDISPLAY();
-		break;
-
-	case BUTTON_EVT_RELEASED | BUTTON_LEFT | BUTTON_RIGHT: // PROCEED
-		// Note that because the approval screen does not have a preprocessor,
-		// we must pass NULL.
-		UX_DISPLAY(ui_signHash_approve, NULL);
-		break;
-	}
-	// (The return value of a button handler is irrelevant; it is never
-	// checked.)
-	return 0;
-}
-
-#endif // HAVE_UX_FLOW
 
 // Append msg to ctx->msg for display. THROW if out of memory.
 static void inline append_ctx_msg (signTxnContext_t *ctx, const char* msg, int msg_len)
@@ -520,28 +352,12 @@ void handleSignTxn(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t dataLen
 	}
 	PRINTF("msg:    %.*H \n", ctx->msgLen, ctx->msg);
 
-#ifdef HAVE_UX_FLOW
 	// Ensure we have one byte for '\0'
 	assert(sizeof(ctx->msg) >= TXN_DISP_MSG_MAX_LEN+1);
 	assert(ctx->msgLen <= TXN_DISP_MSG_MAX_LEN);
 	ctx->msg[ctx->msgLen] = '\0';
 
 	ux_flow_init(0, ux_signmsg_flow, NULL);
-#else
-
-	// Prepare to display the comparison screen by converting the hash to hex
-	// and moving the first 12 characters into the partialMsg buffer.
-	os_memmove(ctx->partialMsg, ctx->msg, 12);
-	ctx->partialMsg[12] = '\0';
-	ctx->displayIndex = 0;
-
-	// Call UX_DISPLAY to display the comparison screen, passing the
-	// corresponding preprocessor. You might ask: Why doesn't UX_DISPLAY
-	// also take the button handler as an argument, instead of using macro
-	// magic? To which I can only reply: ¯\_(ツ)_/¯
-	UX_DISPLAY(ui_signHash_compare, ui_prepro_signHash_compare);
-
-#endif // HAVE_UX_FLOW
 
 	// Set the IO_ASYNC_REPLY flag. This flag tells zil_main that we aren't
 	// sending data to the computer immediately; we need to wait for a button
