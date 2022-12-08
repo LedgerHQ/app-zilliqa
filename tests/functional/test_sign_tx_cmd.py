@@ -56,9 +56,9 @@ def test_sign_tx_simple_accepted(test_name, firmware, backend, navigator):
     # Can't use navigate_until_text_and_compare because of the first screen and
     # approve screen both displaying "Sign" text.
     if firmware.device == "nanos":
-        instructions = get_nano_review_instructions(7)
+        instructions = get_nano_review_instructions(6)
     else:
-        instructions = get_nano_review_instructions(3)
+        instructions = get_nano_review_instructions(4)
     check_transaction(test_name, backend, navigator, transaction, instructions)
 
 
@@ -109,9 +109,9 @@ def test_sign_tx_data_accepted(test_name, firmware, backend, navigator):
     # Can't use navigate_until_text_and_compare because of the first screen and
     # approve screen both displaying "Sign" text.
     if firmware.device == "nanos":
-        instructions = get_nano_review_instructions(8)
+        instructions = get_nano_review_instructions(7)
     else:
-        instructions = get_nano_review_instructions(4)
+        instructions = get_nano_review_instructions(5)
     check_transaction(test_name, backend, navigator, transaction, instructions)
 
 
@@ -135,7 +135,7 @@ def test_sign_tx_code_accepted(test_name, firmware, backend, navigator):
     # Can't use navigate_until_text_and_compare because of the first screen and
     # approve screen both displaying "Sign" text.
     if firmware.device == "nanos":
-        instructions = get_nano_review_instructions(7)
+        instructions = get_nano_review_instructions(10)
     else:
-        instructions = get_nano_review_instructions(3)
+        instructions = get_nano_review_instructions(6)
     check_transaction(test_name, backend, navigator, transaction, instructions)

@@ -71,7 +71,7 @@ static int prepareZilPubKeyAddr()
     } else {
         // The APDU buffer contains the raw bytes of the public key.
         // So, first we need to convert to a human-readable form.
-        bin2hex(ctx->fullStr, sizeof(ctx->fullStr), G_io_apdu_buffer, publicKey.W_len);
+        bin2hex((uint8_t *)ctx->fullStr, sizeof(ctx->fullStr), G_io_apdu_buffer, publicKey.W_len);
     }
 
     return tx;
@@ -97,15 +97,15 @@ UX_STEP_NOCB(
     pnn,
     {
       &C_icon_eye,
-      (char *) ctx->typeStr,
-      (char *) ctx->keyStr,
+      ctx->typeStr,
+      ctx->keyStr,
     });
 UX_STEP_NOCB(
     ux_display_public_flow_2_step,
     bnnn_paging,
     {
       .title = "Value",
-      .text = (char *) ctx->fullStr,
+      .text = ctx->fullStr,
     });
 UX_STEP_VALID(
     ux_display_public_flow_3_step,
@@ -124,13 +124,11 @@ UX_STEP_VALID(
       "Reject",
     });
 
-const ux_flow_step_t *        const ux_display_public_flow [] = {
+UX_FLOW(ux_display_public_flow,
   &ux_display_public_flow_1_step,
   &ux_display_public_flow_2_step,
   &ux_display_public_flow_3_step,
-  &ux_display_public_flow_4_step,
-  FLOW_END_STEP,
-};
+  &ux_display_public_flow_4_step);
 
 // These are APDU parameters that control the behavior of the getPublicKey
 // command.
@@ -172,7 +170,7 @@ void handleGetPublicKey(uint8_t p1,
     }
     int offset = 5;
     os_memmove(ctx->keyStr, "Key #", offset);
-    int n = bin64b2dec(ctx->keyStr + offset, sizeof(ctx->keyStr)-offset, ctx->keyIndex);
+    int n = bin64b2dec((uint8_t *)ctx->keyStr + offset, sizeof(ctx->keyStr)-offset, ctx->keyIndex);
     os_memmove(ctx->keyStr + offset + n, "?", 2);
 
     prepareZilPubKeyAddr();

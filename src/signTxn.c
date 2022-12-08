@@ -17,7 +17,7 @@ static signTxnContext_t * const ctx = &global.signTxnContext;
 static void prepareIndexStr(void)
 {
 		os_memmove(ctx->indexStr, "with Key #", 10);
-		int n = bin64b2dec(ctx->indexStr+10, sizeof(ctx->indexStr)-10, ctx->keyIndex);
+		int n = bin64b2dec((uint8_t*)ctx->indexStr+10, sizeof(ctx->indexStr)-10, ctx->keyIndex);
 		// We copy two bytes so as to include the terminating '\0' byte for the string.
 		os_memmove(ctx->indexStr+10+n, "?", 2);
 }
@@ -44,17 +44,45 @@ UX_FLOW_DEF_NOCB(
     {
       &C_icon_certificate,
       "Sign Txn",
-			(char *) ctx->indexStr,
+      ctx->indexStr,
     });
 UX_FLOW_DEF_NOCB(
     ux_signmsg_flow_2_step,
     bnnn_paging,
     {
-      .title = "Txn",
-      .text = (char *) ctx->msg,
+      .title = "To",
+      .text = ctx->toAddrStr,
+    });
+UX_FLOW_DEF_NOCB(
+    ux_signmsg_flow_3_step,
+    bnnn_paging,
+    {
+      .title = "Amount (ZIL)",
+      .text = ctx->amountStr,
+    });
+UX_FLOW_DEF_NOCB(
+    ux_signmsg_flow_4_step,
+    bnnn_paging,
+    {
+      .title = "Gasprice (ZIL)",
+      .text = ctx->gaspriceStr,
+    });
+UX_FLOW_DEF_NOCB(
+    ux_signmsg_flow_5_step,
+    bnnn_paging,
+    {
+      .title = "Contract code",
+      .text = ctx->codeStr,
+    });
+UX_FLOW_DEF_NOCB(
+    ux_signmsg_flow_6_step,
+    bnnn_paging,
+    {
+      .title = "Contract data",
+      .text = ctx->dataStr,
     });
 UX_FLOW_DEF_VALID(
-    ux_signmsg_flow_3_step,
+    ux_signmsg_flow_7_step,
     pn,
     do_approve(NULL),
     {
@@ -62,7 +90,7 @@ UX_FLOW_DEF_VALID(
       "Sign",
     });
 UX_FLOW_DEF_VALID(
-    ux_signmsg_flow_4_step,
+    ux_signmsg_flow_8_step,
     pn,
     do_reject(NULL),
     {
@@ -70,26 +98,37 @@ UX_FLOW_DEF_VALID(
       "Cancel",
     });
 
-const ux_flow_step_t *        const ux_signmsg_flow [] = {
+/* Simple flow without Smart Contract code nor data */
+UX_FLOW(ux_signmsg_simple_flow,
   &ux_signmsg_flow_1_step,
   &ux_signmsg_flow_2_step,
   &ux_signmsg_flow_3_step,
   &ux_signmsg_flow_4_step,
-  FLOW_END_STEP,
-};
+  &ux_signmsg_flow_7_step,
+  &ux_signmsg_flow_8_step);
 
-// Append msg to ctx->msg for display. THROW if out of memory.
-static void inline append_ctx_msg (signTxnContext_t *ctx, const char* msg, int msg_len)
-{
-	if (ctx->msgLen + msg_len >= TXN_DISP_MSG_MAX_LEN) {
-		FAIL("Display memory full");
-	}
-	
-	os_memcpy(ctx->msg + ctx->msgLen, msg, msg_len);
-	ctx->msgLen += msg_len;
-}
+/* Flow without Smart Contract code but with data */
+UX_FLOW(ux_signmsg_data_flow,
+  &ux_signmsg_flow_1_step,
+  &ux_signmsg_flow_2_step,
+  &ux_signmsg_flow_3_step,
+  &ux_signmsg_flow_4_step,
+  &ux_signmsg_flow_6_step,
+  &ux_signmsg_flow_7_step,
+  &ux_signmsg_flow_8_step);
 
-bool istream_callback (pb_istream_t *stream, pb_byte_t *buf, size_t count)
+/* Flow with Smart Contract code and data */
+UX_FLOW(ux_signmsg_code_data_flow,
+  &ux_signmsg_flow_1_step,
+  &ux_signmsg_flow_2_step,
+  &ux_signmsg_flow_3_step,
+  &ux_signmsg_flow_4_step,
+  &ux_signmsg_flow_5_step,
+  &ux_signmsg_flow_6_step,
+  &ux_signmsg_flow_7_step,
+  &ux_signmsg_flow_8_step);
+
+static bool istream_callback (pb_istream_t *stream, pb_byte_t *buf, size_t count)
 {
 	StreamData *sd = stream->state;
 	int bufNext = 0;
@@ -113,7 +152,7 @@ bool istream_callback (pb_istream_t *stream, pb_byte_t *buf, size_t count)
 		assert(sd->len == sd->nextIdx);
 		if (sd->hostBytesLeft) {
 			G_io_apdu_buffer[0] = 0x90;
-    	G_io_apdu_buffer[1] = 0x00;
+			G_io_apdu_buffer[1] = 0x00;
 			unsigned rx = io_exchange(CHANNEL_APDU, 2);
 			static const uint32_t hostBytesLeftOffset = OFFSET_CDATA + 0;
 			static const uint32_t txnLenOffset = OFFSET_CDATA + 4;
@@ -149,12 +188,14 @@ bool istream_callback (pb_istream_t *stream, pb_byte_t *buf, size_t count)
 	return true;
 }
 
-bool decode_txn_data (pb_istream_t *stream, const pb_field_t *field, void **arg)
+
+static bool decode_and_store_in_ctx(pb_istream_t *stream, char* buffer, uint32_t buffer_len)
 {
 	size_t jsonLen = stream->bytes_left;
-	PRINTF("decode_txn_data: data length=%d\n", jsonLen);
-	if (jsonLen + ctx->msgLen > TXN_DISP_MSG_MAX_LEN) {
-		PRINTF("decode_txn_data: Cannot decode txn, too large.\n");
+	PRINTF("decode_and_store_in_ctx: data length=%d\n", jsonLen);
+	if (jsonLen + 1 /* one byte for \0 */ > buffer_len) {
+		PRINTF("decode_txn_data: Cannot decode code, too large.\n");
+		strlcpy(buffer, "Error: Too large", buffer_len);
 		// We can't do anything but just consume the data.
 		if (!pb_read(stream, NULL, jsonLen)) {
 			FAIL("pb_read failed during txn data decode");
@@ -163,105 +204,57 @@ bool decode_txn_data (pb_istream_t *stream, const pb_field_t *field, void **arg)
 	}
 
 	PRINTF("decode_txn_data: Displaying raw JSON of length %d\n", jsonLen);
-	if (!pb_read(stream, (pb_byte_t*) ctx->msg + ctx->msgLen, jsonLen)) {
+	if (!pb_read(stream, (pb_byte_t*) buffer, jsonLen)) {
 		FAIL("pb_read failed during txn data decode");
 	}
-	ctx->msgLen += jsonLen;
+	// Ensure the string is '\0' terminated
+	buffer[jsonLen] = '\0';
 
 	return true;
 }
 
-static bool decode_callback (pb_istream_t *stream, const pb_field_t *field, void **arg)
+static bool decode_code_callback (pb_istream_t *stream, const pb_field_t *field, void **arg)
 {
-	static const int bufsize = 
-		MAX(ZIL_UINT128_BUF_LEN, MAX(PUB_ADDR_BYTES_LEN, ZIL_AMOUNT_GASPRICE_BYTES));
-	static const int buf2size = MAX(bufsize, BECH32_ENCODE_BUF_LEN);
-	char buf[bufsize], buf2[buf2size];
+	if (field->tag != ProtoTransactionCoreInfo_code_tag) {
+		FAIL("Unexpected data");
+	}
+	return decode_and_store_in_ctx(stream, ctx->codeStr, sizeof(ctx->codeStr));
+}
+
+static bool decode_data_callback (pb_istream_t *stream, const pb_field_t *field, void **arg)
+{
+	if (field->tag != ProtoTransactionCoreInfo_data_tag) {
+		FAIL("Unexpected data");
+	}
+	return decode_and_store_in_ctx(stream, ctx->dataStr, sizeof(ctx->dataStr));
+}
+
+static bool decode_toaddr_callback (pb_istream_t *stream, const pb_field_t *field, void **arg)
+{
+	uint8_t buf[PUB_ADDR_BYTES_LEN];
+	char buf2[BECH32_ENCODE_BUF_LEN];
 
 	CHECK_CANARY;
 
-  int readlen;
-	const char* tagread;
-	switch (field->tag) {
-	case ProtoTransactionCoreInfo_toaddr_tag:
-		PRINTF("decode_callback: toaddr\n");
-		readlen = PUB_ADDR_BYTES_LEN;
-		tagread = "sendto: ";
-		break;
-	case ByteArray_data_tag:
-		switch ((int) *arg) {
-		case ProtoTransactionCoreInfo_amount_tag:
-			PRINTF("decode_callback: amount\n");
-			readlen = ZIL_AMOUNT_GASPRICE_BYTES;
-			tagread = "amount(ZIL): ";
-			break;
-		case ProtoTransactionCoreInfo_gasprice_tag:
-			PRINTF("decode_callback: gasprice\n");
-			readlen = ZIL_AMOUNT_GASPRICE_BYTES;
-			tagread = "gasprice(ZIL): ";
-			break;
-		default:
-			PRINTF("decode_callback: arg: %d\n", (int) *arg);
-			readlen = 0;
-			tagread = "";
-			FAIL("Unhandled ByteArray tag.");
-		}
-		break;
-	default:
-		PRINTF("decode_callback: %d\n", field->tag);
-		readlen = 0;
-		tagread = "";
-		FAIL("Unhandled transaction element.");
+	if (field->tag != ProtoTransactionCoreInfo_toaddr_tag) {
+		FAIL("Unexpected data");
 	}
 
-	if (pb_read(stream, (pb_byte_t*) buf, readlen)) {
+	if (pb_read(stream, (pb_byte_t*) buf, PUB_ADDR_BYTES_LEN)) {
 		CHECK_CANARY;
-		PRINTF("decoded bytes: 0x%.*h\n", readlen, buf);
+		PRINTF("decoded bytes: 0x%.*h\n", PUB_ADDR_BYTES_LEN, buf);
 		// Write data for display.
-		append_ctx_msg(ctx, tagread, strlen(tagread));
-		if (readlen == PUB_ADDR_BYTES_LEN) {
-			if (!bech32_addr_encode(buf2, "zil", (uint8_t*) buf, PUB_ADDR_BYTES_LEN)) {
-				FAIL ("bech32 encoding of sendto address failed");
-			}
-			CHECK_CANARY;
-			if (strlen(buf2) != BECH32_ADDRSTR_LEN) {
-				FAIL ("bech32 encoded address of incorrect length");
-			}
-			append_ctx_msg(ctx, buf2, BECH32_ADDRSTR_LEN);
-		} else {
-			assert(readlen == ZIL_AMOUNT_GASPRICE_BYTES);
-			// It is either gasprice or amount. a uint128_t value.
-			// Convert to decimal, appending a '\0'.
-			// ZIL data is big-endian, we need little-endian here.
-			for (int i = 0; i < 4; i++) {
-				// The upper 64b and lower 64b themselves aren't swapped, just within them.
-				// Upper uint64 is converted to little endian.
-				uint8_t t = buf[i];
-				buf[i] = buf[7-i];
-				buf[7-i] = t;
-				// lower uint64 is converted to little endian.
-				t = buf[8+i];
-				buf[8+i] = buf[15-i];
-				buf[15-i] = t;
-			}
-			CHECK_CANARY;
-			// UINT128 can have a maximum of 39 decimal digits. When we convert
-			// "Qa" values to "Zil", we may have to append "0." at the start.
-			// So a total of 39 + 2 + '\0' = 42.
-			if (tostring128((uint128_t*)buf, 10, buf2, buf2size)) {
-				PRINTF("128b to decimal converted value: %s\n", buf2);
-				CHECK_CANARY;
-				qa_to_zil(buf2, buf, bufsize);
-				PRINTF("Qa converted to Zil: %s\n", buf);
-				append_ctx_msg(ctx, buf, strlen(buf));
-				CHECK_CANARY;
-			} else {
-				FAIL("Error converting 128b unsigned to decimal");
-			}
+		if (!bech32_addr_encode(buf2, "zil", buf, PUB_ADDR_BYTES_LEN)) {
+			FAIL ("bech32 encoding of sendto address failed");
 		}
 		CHECK_CANARY;
-		append_ctx_msg(ctx, " ", 1);
-		PRINTF("pb_read: read %d bytes\n", readlen);
+		if (strlen(buf2) != BECH32_ADDRSTR_LEN) {
+			FAIL ("bech32 encoded address of incorrect length");
+		}
+		assert(sizeof(ctx->toAddrStr) >= BECH32_ADDRSTR_LEN + 1);
+		memcpy(ctx->toAddrStr, buf2, BECH32_ADDRSTR_LEN);
+		ctx->toAddrStr[BECH32_ADDRSTR_LEN] = '\0';
+		CHECK_CANARY;
 	} else {
 		PRINTF("pb_read failed\n");
 		return false;
@@ -270,6 +263,69 @@ static bool decode_callback (pb_istream_t *stream, const pb_field_t *field, void
 	CHECK_CANARY;
 	return true;
 }
+
+static bool decode_amount_gasprice_callback (pb_istream_t *stream, const pb_field_t *field, void **arg)
+{
+	uint8_t buf[ZIL_AMOUNT_GASPRICE_BYTES];
+	char buf2[ZIL_UINT128_BUF_LEN];
+
+	CHECK_CANARY;
+
+	if (field->tag != ByteArray_data_tag) {
+		FAIL("Unexpected data");
+	}
+
+	if (((int) *arg != ProtoTransactionCoreInfo_amount_tag) &&
+	    ((int) *arg != ProtoTransactionCoreInfo_gasprice_tag)) {
+		FAIL("Unhandled ByteArray tag");
+	}
+
+	if (pb_read(stream, (pb_byte_t*) buf, ZIL_AMOUNT_GASPRICE_BYTES)) {
+		CHECK_CANARY;
+		PRINTF("decoded bytes: 0x%.*h\n", ZIL_AMOUNT_GASPRICE_BYTES, buf);
+		// Write data for display.
+		// It is either gasprice or amount. a uint128_t value.
+		// Convert to decimal, appending a '\0'.
+		// ZIL data is big-endian, we need little-endian here.
+		for (int i = 0; i < 4; i++) {
+			// The upper 64b and lower 64b themselves aren't swapped, just within them.
+			// Upper uint64 is converted to little endian.
+			uint8_t t = buf[i];
+			buf[i] = buf[7-i];
+			buf[7-i] = t;
+			// lower uint64 is converted to little endian.
+			t = buf[8+i];
+			buf[8+i] = buf[15-i];
+			buf[15-i] = t;
+		}
+		CHECK_CANARY;
+		// UINT128 can have a maximum of 39 decimal digits. When we convert
+		// "Qa" values to "Zil", we may have to append "0." at the start.
+		// So a total of 39 + 2 + '\0' = 42.
+		if (tostring128((uint128_t*)buf, 10, buf2, sizeof(buf2))) {
+			PRINTF("128b to decimal converted value: %s\n", buf2);
+			CHECK_CANARY;
+			if ((int) *arg != ProtoTransactionCoreInfo_amount_tag) {
+				qa_to_zil(buf2, ctx->amountStr, sizeof(ctx->amountStr));
+				PRINTF("Amount Qa converted to Zil: %s\n", ctx->amountStr);
+			} else {
+				qa_to_zil(buf2, ctx->gaspriceStr, sizeof(ctx->gaspriceStr));
+				PRINTF("Gasprice Qa converted to Zil: %s\n", ctx->gaspriceStr);
+			}
+			CHECK_CANARY;
+		} else {
+			FAIL("Error converting 128b unsigned to decimal");
+		}
+		CHECK_CANARY;
+	} else {
+		PRINTF("pb_read failed\n");
+		return false;
+	}
+
+	CHECK_CANARY;
+	return true;
+}
+
 // Sign the txn, also deserializes parts of it. May call io_exchange multiple times.
 // Output: 1. Display message will be populated in ctx->msg.
 //         2. Signature will be populated in ctx->signature.
@@ -282,8 +338,12 @@ static bool sign_deserialize_stream(const uint8_t *txn1, int txn1Len, int hostBy
   // Setup the stream.
 	pb_istream_t stream = { istream_callback, &ctx->sd, hostBytesLeft + txn1Len, NULL };
 
-	// Initialize the display message.
-	ctx->msgLen = 0;
+	// Initialize the display messages.
+	ctx->toAddrStr[0] = '\0';
+	ctx->amountStr[0] = '\0';
+	ctx->gaspriceStr[0] = '\0';
+	ctx->codeStr[0] = '\0';
+	ctx->dataStr[0] = '\0';
 
 	CHECK_CANARY;
 	// Initialize schnorr signing, continue with what we have so far.
@@ -295,15 +355,16 @@ static bool sign_deserialize_stream(const uint8_t *txn1, int txn1Len, int hostBy
 	// Initialize protobuf Txn structs.
 	os_memset(&ctx->txn, 0, sizeof(ctx->txn));
 	// Set callbacks for handling the fields that what we need.
-	ctx->txn.toaddr.funcs.decode = decode_callback;
+	ctx->txn.toaddr.funcs.decode = decode_toaddr_callback;
 	// Since we're using the same callback for amount and gasprice,
 	// but the tag for both will be set to "ByteArray", we differentiate with "arg".
-	ctx->txn.amount.data.funcs.decode = decode_callback;
+	ctx->txn.amount.data.funcs.decode = decode_amount_gasprice_callback;
 	ctx->txn.amount.data.arg = (void*)ProtoTransactionCoreInfo_amount_tag;
-	ctx->txn.gasprice.data.funcs.decode = decode_callback;
+	ctx->txn.gasprice.data.funcs.decode = decode_amount_gasprice_callback;
 	ctx->txn.gasprice.data.arg = (void*)ProtoTransactionCoreInfo_gasprice_tag;
-	// Set a decoder for the data field of our transaction.
-	ctx->txn.data.funcs.decode = decode_txn_data;
+	// Set a decoder for the data and code fields of our transaction.
+	ctx->txn.data.funcs.decode = decode_data_callback;
+	ctx->txn.code.funcs.decode = decode_code_callback;
 
 	CHECK_CANARY;
 
@@ -350,14 +411,16 @@ void handleSignTxn(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t dataLen
 	if (!sign_deserialize_stream(dataBuffer + dataOffset, txnLen, hostBytesLeft)) {
 		FAIL("sign_deserialize_stream failed");
 	}
-	PRINTF("msg:    %.*H \n", ctx->msgLen, ctx->msg);
 
-	// Ensure we have one byte for '\0'
-	assert(sizeof(ctx->msg) >= TXN_DISP_MSG_MAX_LEN+1);
-	assert(ctx->msgLen <= TXN_DISP_MSG_MAX_LEN);
-	ctx->msg[ctx->msgLen] = '\0';
-
-	ux_flow_init(0, ux_signmsg_flow, NULL);
+	if (ctx->codeStr[0] == '\0') {
+		if (ctx->dataStr[0] == '\0') {
+			ux_flow_init(0, ux_signmsg_simple_flow, NULL);
+		} else {
+			ux_flow_init(0, ux_signmsg_data_flow, NULL);
+		}
+	} else {
+		ux_flow_init(0, ux_signmsg_code_data_flow, NULL);
+	}
 
 	// Set the IO_ASYNC_REPLY flag. This flag tells zil_main that we aren't
 	// sending data to the computer immediately; we need to wait for a button

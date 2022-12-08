@@ -138,12 +138,10 @@ UX_STEP_VALID(
       "Quit",
     });
 
-const ux_flow_step_t *        const ux_idle_flow [] = {
+UX_FLOW(ux_idle_flow,
   &ux_idle_flow_1_step,
   &ux_idle_flow_2_step,
-  &ux_idle_flow_3_step,
-  FLOW_END_STEP,
-};
+  &ux_idle_flow_3_step);
 
 // ui_idle displays the main menu. Note that your app isn't required to use a
 // menu as its idle screen; you can define your own completely custom screen.

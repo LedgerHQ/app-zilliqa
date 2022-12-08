@@ -34,7 +34,7 @@ static signHashContext_t * const ctx = &global.signHashContext;
 static void prepareIndexStr(void)
 {
 		os_memmove(ctx->indexStr, "with Key #", 10);
-		int n = bin64b2dec(ctx->indexStr+10, sizeof(ctx->indexStr)-10, ctx->keyIndex);
+		int n = bin64b2dec((uint8_t*)ctx->indexStr+10, sizeof(ctx->indexStr)-10, ctx->keyIndex);
 		// We copy two bytes so as to include the terminating '\0' byte for the string.
 		os_memmove(ctx->indexStr+10+n, "?", 2);
 }
@@ -65,14 +65,14 @@ UX_FLOW_DEF_NOCB(
     {
       &C_icon_certificate,
       "Sign SHA256 Hash",
-			(char *) ctx->indexStr,
+      ctx->indexStr,
     });
 UX_FLOW_DEF_NOCB(
     ux_signhash_flow_2_step,
     bnnn_paging,
     {
       .title = "Hash",
-      .text = (char *) ctx->hexHash,
+      .text = ctx->hexHash,
     });
 UX_FLOW_DEF_VALID(
     ux_signhash_flow_3_step,
@@ -91,13 +91,12 @@ UX_FLOW_DEF_VALID(
       "Cancel",
     });
 
-const ux_flow_step_t *        const ux_signhash_flow [] = {
+UX_FLOW(ux_signhash_flow,
   &ux_signhash_flow_1_step,
   &ux_signhash_flow_2_step,
   &ux_signhash_flow_3_step,
-  &ux_signhash_flow_4_step,
-  FLOW_END_STEP,
-};
+  &ux_signhash_flow_4_step
+);
 
 // handleSignHash is the entry point for the signHash command. Like all
 // command handlers, it is responsible for reading command data from
@@ -117,7 +116,7 @@ void handleSignHash(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t dataLe
 	// Read the hash.
 	os_memmove(ctx->hash, dataBuffer+4, sizeof(ctx->hash));
 	// Prepare to display the comparison screen by converting the hash to hex
-	bin2hex(ctx->hexHash, sizeof(ctx->hexHash), ctx->hash, sizeof(ctx->hash));
+	bin2hex((uint8_t*)ctx->hexHash, sizeof(ctx->hexHash), ctx->hash, sizeof(ctx->hash));
 	PRINTF("hash:    %.*H \n", 32, ctx->hash);
 	PRINTF("hexHash: %.*H \n", 64, ctx->hexHash);
 
