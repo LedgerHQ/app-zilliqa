@@ -30,15 +30,6 @@
 // signHash-related function.
 static signHashContext_t * const ctx = &global.signHashContext;
 
-// Print the key index into the indexStr buffer. 
-static void prepareIndexStr(void)
-{
-		os_memmove(ctx->indexStr, "with Key #", 10);
-		int n = bin64b2dec((uint8_t*)ctx->indexStr+10, sizeof(ctx->indexStr)-10, ctx->keyIndex);
-		// We copy two bytes so as to include the terminating '\0' byte for the string.
-		os_memmove(ctx->indexStr+10+n, "?", 2);
-}
-
 static void do_approve(const bagl_element_t *e)
 {
 		// Derive the secret key and sign the hash, storing the signature in
@@ -111,12 +102,12 @@ void handleSignHash(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t dataLe
 	// converting a 4-byte buffer to a uint32_t.
 	ctx->keyIndex = U4LE(dataBuffer, 0);
 	// Generate a string for the index.
-	prepareIndexStr();
+	snprintf(ctx->indexStr, sizeof(ctx->indexStr), "with Key #%d?", ctx->keyIndex);
 
 	// Read the hash.
 	os_memmove(ctx->hash, dataBuffer+4, sizeof(ctx->hash));
 	// Prepare to display the comparison screen by converting the hash to hex
-	bin2hex((uint8_t*)ctx->hexHash, sizeof(ctx->hexHash), ctx->hash, sizeof(ctx->hash));
+	snprintf(ctx->hexHash, sizeof(ctx->hexHash), "%.*h", sizeof(ctx->hash), ctx->hash);
 	PRINTF("hash:    %.*H \n", 32, ctx->hash);
 	PRINTF("hexHash: %.*H \n", 64, ctx->hexHash);
 

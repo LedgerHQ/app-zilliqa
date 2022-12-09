@@ -106,19 +106,4 @@ int deriveAndSignFinish(zil_ecschnorr_t *T, uint32_t index, unsigned char *dst, 
 // The key is cleared from memory after signing.
 void deriveAndSign(uint8_t *dst, uint32_t dst_len, uint32_t index, const uint8_t *msg, unsigned int msg_len);
 
-// BYTE UTILS
-
-// bin2hex converts binary to hex and appends a final NUL byte.
-void bin2hex(uint8_t *dst, uint64_t dstlen, uint8_t *data, uint64_t inlen);
-
-// bin64b2dec converts an unsigned integer to a decimal string and appends a
-// final NUL byte. It returns the length of the string.
-int bin64b2dec(uint8_t *dst, uint32_t dst_len, uint64_t n);
-
-// Given a hex string with numhexchar characters, convert it
-// to byte sequence and place in "bin" (which must be allocated
-// with at least numhexchar/2 bytes already).
-void hex2bin(const uint8_t *hexstr, unsigned numhexchars, uint8_t *bin);
-
-
 #endif

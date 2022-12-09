@@ -13,15 +13,6 @@
 
 static signTxnContext_t * const ctx = &global.signTxnContext;
 
-// Print the key index into the indexStr buffer. 
-static void prepareIndexStr(void)
-{
-		os_memmove(ctx->indexStr, "with Key #", 10);
-		int n = bin64b2dec((uint8_t*)ctx->indexStr+10, sizeof(ctx->indexStr)-10, ctx->keyIndex);
-		// We copy two bytes so as to include the terminating '\0' byte for the string.
-		os_memmove(ctx->indexStr+10+n, "?", 2);
-}
-
 static void do_approve(const bagl_element_t *e)
 {
 		assert(IO_APDU_BUFFER_SIZE >= SCHNORR_SIG_LEN_RS);
@@ -416,7 +407,7 @@ void handleSignTxn(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t dataLen
   // Read the various integers at the beginning.
 	ctx->keyIndex = U4LE(dataBuffer, dataIndexOffset);
 	// Generate a string for the index.
-	prepareIndexStr();
+	snprintf(ctx->indexStr, sizeof(ctx->indexStr), "with Key #%d?", ctx->keyIndex);
 
 	PRINTF("handleSignTxn: keyIndex: %d \n", ctx->keyIndex);
 	hostBytesLeft = U4LE(dataBuffer, dataHostBytesLeftOffset);

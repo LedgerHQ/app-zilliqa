@@ -122,6 +122,9 @@ endif
 CC := $(CLANGPATH)clang
 CFLAGS += -O3 -Os
 
+# Remove warning on custom snprintf implementation usage
+CFLAGS += -Wno-format
+
 AS := $(GCCPATH)arm-none-eabi-gcc
 LD := $(GCCPATH)arm-none-eabi-gcc
 LDFLAGS += -O3 -Os

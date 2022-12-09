@@ -71,7 +71,7 @@ static int prepareZilPubKeyAddr()
     } else {
         // The APDU buffer contains the raw bytes of the public key.
         // So, first we need to convert to a human-readable form.
-        bin2hex((uint8_t *)ctx->fullStr, sizeof(ctx->fullStr), G_io_apdu_buffer, publicKey.W_len);
+        snprintf(ctx->fullStr, sizeof(ctx->fullStr), "%.*h", publicKey.W_len, G_io_apdu_buffer);
     }
 
     return tx;
@@ -173,10 +173,7 @@ void handleGetPublicKey(uint8_t p1,
     else {
         os_memmove(ctx->typeStr, "Generate Public", 16);
     }
-    int offset = 5;
-    os_memmove(ctx->keyStr, "Key #", offset);
-    int n = bin64b2dec((uint8_t *)ctx->keyStr + offset, sizeof(ctx->keyStr)-offset, ctx->keyIndex);
-    os_memmove(ctx->keyStr + offset + n, "?", 2);
+    snprintf(ctx->keyStr, sizeof(ctx->keyStr), "Key #%d?", ctx->keyIndex);
 
     prepareZilPubKeyAddr();
     ux_flow_init(0, ux_display_public_flow, NULL);
