@@ -361,7 +361,7 @@ static bool sign_deserialize_stream(const uint8_t *txn1, int txn1Len, int hostBy
 	CHECK_CANARY;
 
 	// Initialize protobuf Txn structs.
-	os_memset(&ctx->txn, 0, sizeof(ctx->txn));
+	memset(&ctx->txn, 0, sizeof(ctx->txn));
 	// Set callbacks for handling the fields that what we need.
 	ctx->txn.toaddr.funcs.decode = decode_toaddr_callback;
 	// Since we're using the same callback for amount and gasprice,
