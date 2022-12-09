@@ -71,11 +71,14 @@ void print_available_stack();
 #define BECH32_ENCODE_BUF_LEN 73 + 3
 
 // exception codes
-#define SW_DEVELOPER_ERR 0x6B00
-#define SW_INVALID_PARAM 0x6B01
-#define SW_IMPROPER_INIT 0x6B02
-#define SW_USER_REJECTED 0x6985
-#define SW_OK            0x9000
+#define SW_WRONG_DATA_LENGTH 0x6A87
+#define SW_INS_NOT_SUPPORTED 0x6D00
+#define SW_CLA_NOT_SUPPORTED 0x6E00
+#define SW_DEVELOPER_ERR     0x6B00
+#define SW_INVALID_PARAM     0x6B01
+#define SW_IMPROPER_INIT     0x6B02
+#define SW_USER_REJECTED     0x6985
+#define SW_OK                0x9000
 
 // macros for converting raw bytes to uint64_t
 #define U8BE(buf, off) (((uint64_t)(U4BE(buf, off))     << 32) | ((uint64_t)(U4BE(buf, off + 4)) & 0xFFFFFFFF))

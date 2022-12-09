@@ -156,6 +156,11 @@ void handleGetPublicKey(uint8_t p1,
         THROW(SW_INVALID_PARAM);
     }
 
+    // Sanity-check the command length
+    if (dataLength != sizeof(uint32_t)) {
+        THROW(SW_WRONG_DATA_LENGTH);
+    }
+
     // Read the key index from dataBuffer and set the genAddr flag according
     // to p2.
     ctx->keyIndex = U4LE(dataBuffer, 0);

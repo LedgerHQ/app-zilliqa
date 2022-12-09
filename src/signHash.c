@@ -103,15 +103,15 @@ UX_FLOW(ux_signhash_flow,
 // dataBuffer, initializing the command context, and displaying the first
 // screen of the command.
 void handleSignHash(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t dataLength, volatile unsigned int *flags, volatile unsigned int *tx) {
+	if (dataLength != sizeof(uint32_t) + sizeof(ctx->hash)) {
+		FAIL("Incorrect dataLength calling handleSignHash");
+	}
+
 	// Read the index of the signing key. U4LE is a helper macro for
 	// converting a 4-byte buffer to a uint32_t.
 	ctx->keyIndex = U4LE(dataBuffer, 0);
 	// Generate a string for the index.
 	prepareIndexStr();
-
-	if (dataLength != sizeof(uint32_t) + sizeof(ctx->hash)) {
-		FAIL("Incorrect dataLength calling handleSignHash");
-	}
 
 	// Read the hash.
 	os_memmove(ctx->hash, dataBuffer+4, sizeof(ctx->hash));

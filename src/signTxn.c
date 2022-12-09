@@ -154,15 +154,32 @@ static bool istream_callback (pb_istream_t *stream, pb_byte_t *buf, size_t count
 			G_io_apdu_buffer[0] = 0x90;
 			G_io_apdu_buffer[1] = 0x00;
 			unsigned rx = io_exchange(CHANNEL_APDU, 2);
+			// Sanity-check the command length
+			if (rx < OFFSET_CDATA) {
+				FAIL("Bad command length");
+			}
+			// APDU length and LC field consistency
+			if (rx - OFFSET_CDATA != G_io_apdu_buffer[OFFSET_LC]) {
+				FAIL("Bad command length");
+			}
 			static const uint32_t hostBytesLeftOffset = OFFSET_CDATA + 0;
 			static const uint32_t txnLenOffset = OFFSET_CDATA + 4;
 			static const uint32_t dataOffset = OFFSET_CDATA + 8;
+
+			// Sanity-check the command length
+			if (rx < OFFSET_CDATA + sizeof(uint32_t) + sizeof(uint32_t)) {
+				FAIL("Bad command length");
+			}
+
 			// These two cannot be made static as the function is recursive.
 			uint32_t hostBytesLeft = U4LE(G_io_apdu_buffer, hostBytesLeftOffset);
 			uint32_t txnLen = U4LE(G_io_apdu_buffer, txnLenOffset);
 			PRINTF("istream_callback: io_exchanged %d bytes\n", rx);
 			PRINTF("istream_callback: hostBytesLeft: %d\n", hostBytesLeft);
 			PRINTF("istream_callback: txnLen: %d\n", txnLen);
+			if (rx != dataOffset + txnLen) {
+				FAIL("Bad command length");
+			}
 			if (txnLen > TXN_BUF_SIZE) {
 				FAIL("Cannot handle large data sent from host");
 			}
@@ -391,6 +408,11 @@ void handleSignTxn(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t dataLen
 	static const int dataTxnLenOffset = 8;     // offset for integer containing length of current txn
 	static const int dataOffset = 12;          // offset for actual transaction data.
 
+	// Sanity-check the command length
+	if (dataLength < sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint32_t)) {
+		THROW(SW_WRONG_DATA_LENGTH);
+	}
+
   // Read the various integers at the beginning.
 	ctx->keyIndex = U4LE(dataBuffer, dataIndexOffset);
 	// Generate a string for the index.
@@ -401,6 +423,9 @@ void handleSignTxn(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t dataLen
 	PRINTF("handleSignTxn: hostBytesLeft: %d \n", hostBytesLeft);
 	txnLen = U4LE(dataBuffer, dataTxnLenOffset);
 	PRINTF("handleSignTxn: txnLen: %d\n", txnLen);
+	if (dataLength != dataOffset + txnLen) {
+		THROW(SW_WRONG_DATA_LENGTH);
+	}
 	if (txnLen > TXN_BUF_SIZE) {
 		FAIL("Cannot handle large data sent from host");
 	}
