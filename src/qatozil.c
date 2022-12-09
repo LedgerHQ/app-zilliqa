@@ -1,6 +1,10 @@
 #include <stdbool.h>
 #include <stdint.h>
+#ifndef UNIT_TESTS
 #include <string.h>
+#else
+#include <bsd/string.h>
+#endif
 
 #include "qatozil.h"
 #ifndef UNIT_TESTS
@@ -15,7 +19,7 @@ int isdigit(int);
 /* Filter out leading zero's and non-digit characters in a null terminated string. */
 static void cleanse_input(char *buf)
 {
-  int len = strlen(buf);
+  int len = strnlen(buf, ZIL_UINT128_BUF_LEN);
   assert (len < ZIL_UINT128_BUF_LEN);
   int nextpos = 0;
   bool seen_nonzero = false;
@@ -41,7 +45,7 @@ static void cleanse_input(char *buf)
 /* Removing trailing 0s and ".". */
 static void remove_trailing_zeroes(char *buf)
 {
-  int len = strlen(buf);
+  int len = strnlen(buf, ZIL_UINT128_BUF_LEN);
   assert(len < ZIL_UINT128_BUF_LEN);
 
   for (int i = len-1; i >= 0; i--) {
@@ -60,20 +64,20 @@ static void remove_trailing_zeroes(char *buf)
 
 /* Given a null terminated sequence of digits (value < UINT128_MAX),
  * divide it by "shift" and pretty print the result. */
-static void ToZil(char *input, char *output, int shift)
+static void ToZil(char *input, char *output, int output_len, int shift)
 {
-  int len = strlen(input);
+  int len = strnlen(input, ZIL_UINT128_BUF_LEN);
   assert(len > 0 && len < ZIL_UINT128_BUF_LEN);
   assert(shift == QA_ZIL_SHIFT);
 
   if (len <= shift) {
-    strcpy(output, "0.");
+    strlcpy(output, "0.", output_len);
     /* Insert (shift - len) 0s. */
     for (int i = 0; i < (shift - len); i++) {
       /* A bit inefficient, but it's ok, at most shift iterations. */
-      strcat(output, "0");
+      strlcat(output, "0", output_len);
     }
-    strcat(output, input);
+    strlcat(output, input, output_len);
     remove_trailing_zeroes(output);
     return;
   }
@@ -81,25 +85,25 @@ static void ToZil(char *input, char *output, int shift)
   /* len >= shift+1. Copy the first len-shift characters. */
   strncpy(output, input, len - shift);
   /* append a decimal point. */
-  strcpy(output + len - shift, ".");
+  strlcpy(output + len - shift, ".", output_len - len + shift);
   /* copy the remaining characters in input. */
-  strcat(output, input + len - shift);
+  strlcat(output, input + len - shift, output_len);
   /* Remove trailing zeroes (after the decimal point). */
   remove_trailing_zeroes(output);
 }
 
 void qa_to_zil(const char* qa, char* zil_buf, int zil_buf_len)
 {
-  int qa_len = strlen(qa);
+  int qa_len = strnlen(qa, ZIL_UINT128_BUF_LEN);
   assert(zil_buf_len >= ZIL_UINT128_BUF_LEN && qa_len < ZIL_UINT128_BUF_LEN);
 
   char qa_buf[ZIL_UINT128_BUF_LEN];
 
   CHECK_CANARY;
-  strcpy(qa_buf, qa);
+  strlcpy(qa_buf, qa, sizeof(qa_buf));
   /* Cleanse the input. */
   cleanse_input(qa_buf);
   /* Convert Qa to Zil. */
-  ToZil(qa_buf, zil_buf, QA_ZIL_SHIFT);
+  ToZil(qa_buf, zil_buf, zil_buf_len, QA_ZIL_SHIFT);
   CHECK_CANARY;
 }

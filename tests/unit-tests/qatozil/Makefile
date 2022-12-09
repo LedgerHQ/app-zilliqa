@@ -2,11 +2,11 @@ CC ?= cc
 RM ?= rm -f
 
 CFLAGS ?= -O2 -Wall -Wextra -Wformat=2 -Wp,-MT,$@ -Wp,-MD,$(dir $@).$(notdir $@).d -fstack-protector
-CFLAGS += -DPRINTF=printf
+CFLAGS += -DPRINTF=printf -lbsd
 CFLAGS += -DUNIT_TESTS
 CFLAGS += -I../../../src
 
-LDFLAGS ?= -Wl,-O1,-as-needed,-no-undefined,-z,relro,-z,now,--fatal-warnings -fstack-protector
+LDFLAGS ?= -lbsd -Wl,-O1,-as-needed,-no-undefined,-z,relro,-z,now,--fatal-warnings -fstack-protector
 
 # Use Address Sanitizer (ASAN) and Undefined Behavior Sanitizer (UBSAN)
 CFLAGS += -fsanitize=address,undefined
