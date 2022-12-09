@@ -56,7 +56,7 @@ static int prepareZilPubKeyAddr()
     char bech32Str[73+3];
     bech32_addr_encode(bech32Str, "zil", bytesAddr, PUB_ADDR_BYTES_LEN);
     // Copy over the bech32 string to the apdu buffer for exchange.
-    os_memcpy(G_io_apdu_buffer + tx, bech32Str, BECH32_ADDRSTR_LEN);
+    memcpy(G_io_apdu_buffer + tx, bech32Str, BECH32_ADDRSTR_LEN);
     tx += BECH32_ADDRSTR_LEN;
 
     PRINTF("Public Key: %.*h\n", publicKey.W_len, G_io_apdu_buffer);
@@ -65,7 +65,7 @@ static int prepareZilPubKeyAddr()
     //  ctx->fullStr will contain the final text for display.
     if (ctx->genAddr) {
         // The APDU buffer contains printable bech32 string.
-        os_memcpy(ctx->fullStr, G_io_apdu_buffer + publicKey.W_len, BECH32_ADDRSTR_LEN);
+        memcpy(ctx->fullStr, G_io_apdu_buffer + publicKey.W_len, BECH32_ADDRSTR_LEN);
         assert(sizeof(ctx->fullStr) >= BECH32_ADDRSTR_LEN + 1);
         ctx->fullStr[BECH32_ADDRSTR_LEN] = '\0';
     } else {

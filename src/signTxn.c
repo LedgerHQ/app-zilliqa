@@ -16,7 +16,7 @@ static signTxnContext_t * const ctx = &global.signTxnContext;
 static void do_approve(const bagl_element_t *e)
 {
 		assert(IO_APDU_BUFFER_SIZE >= SCHNORR_SIG_LEN_RS);
-		os_memcpy(G_io_apdu_buffer, ctx->signature, SCHNORR_SIG_LEN_RS);
+		memcpy(G_io_apdu_buffer, ctx->signature, SCHNORR_SIG_LEN_RS);
 		// Send the data in the APDU buffer, which is a 64 byte signature.
 		io_exchange_with_code(SW_OK, SCHNORR_SIG_LEN_RS);
 		// Return to the main screen.
@@ -130,7 +130,7 @@ static bool istream_callback (pb_istream_t *stream, pb_byte_t *buf, size_t count
 	if (sdbufRem > 0) {
 		// We have some data to spare.
 		int copylen = MIN(sdbufRem, (int)count);
-		os_memcpy(buf, sd->buf + sd->nextIdx, copylen);
+		memcpy(buf, sd->buf + sd->nextIdx, copylen);
 		count -= copylen;
 		bufNext += copylen;
 		sd->nextIdx += copylen;
@@ -178,7 +178,7 @@ static bool istream_callback (pb_istream_t *stream, pb_byte_t *buf, size_t count
 
 			// Update and move data to our state.
 			sd->len = txnLen;
-			os_memcpy(sd->buf, G_io_apdu_buffer + dataOffset, txnLen);
+			memcpy(sd->buf, G_io_apdu_buffer + dataOffset, txnLen);
 			sd->hostBytesLeft = hostBytesLeft;
 			sd->nextIdx = 0;
 			CHECK_CANARY;
@@ -340,7 +340,7 @@ static bool decode_amount_gasprice_callback (pb_istream_t *stream, const pb_fiel
 static bool sign_deserialize_stream(const uint8_t *txn1, int txn1Len, int hostBytesLeft)
 {
 	// Initialize stream data.
-	os_memcpy(ctx->sd.buf, txn1, txn1Len);
+	memcpy(ctx->sd.buf, txn1, txn1Len);
 	ctx->sd.nextIdx = 0; ctx->sd.len = txn1Len; ctx->sd.hostBytesLeft = hostBytesLeft;
 	assert(hostBytesLeft <= ZIL_MAX_TXN_SIZE - txn1Len);
   // Setup the stream.

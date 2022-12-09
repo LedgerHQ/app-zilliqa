@@ -87,7 +87,7 @@ void zil_ecschnorr_sign_init
   unsigned char nonce[size+8];
   cx_rng(nonce, size+8);
   cx_math_modm(nonce, size+8, (unsigned WIDE char *) PIC(domain->n), size);
-  os_memcpy(T->K, nonce, size);
+  memcpy(T->K, nonce, size);
 
   //sign
   U.Q[0] = 4;
