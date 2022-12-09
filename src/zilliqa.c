@@ -60,8 +60,8 @@ void deriveZilPubKey(uint32_t index,
 
     compressPubKey(publicKey);
 
-    memset(keySeed, 0, sizeof(keySeed));
-    memset(&pk, 0, sizeof(pk));
+    explicit_bzero(keySeed, sizeof(keySeed));
+    explicit_bzero(&pk, sizeof(pk));
     PLOC();
 }
 
@@ -83,8 +83,8 @@ void deriveAndSign(uint8_t *dst, uint32_t dst_len, uint32_t index, const uint8_t
     PRINTF("deriveAndSign: signature: %.*H\n", SCHNORR_SIG_LEN_RS, dst);
 
     // Erase private keys for better security.
-    memset(keySeed, 0, sizeof(keySeed));
-    memset(&privateKey, 0, sizeof(privateKey));
+    explicit_bzero(keySeed, sizeof(keySeed));
+    explicit_bzero(&privateKey, sizeof(privateKey));
 }
 
 void deriveAndSignInit(zil_ecschnorr_t *T, uint32_t index)
@@ -104,8 +104,8 @@ void deriveAndSignInit(zil_ecschnorr_t *T, uint32_t index)
 	CHECK_CANARY;
 
     // Erase private keys for better security.
-    memset(keySeed, 0, sizeof(keySeed));
-    memset(&privateKey, 0, sizeof(privateKey));
+    explicit_bzero(keySeed, sizeof(keySeed));
+    explicit_bzero(&privateKey, sizeof(privateKey));
 }
 
 void deriveAndSignContinue(zil_ecschnorr_t *T, const uint8_t *msg, unsigned int msg_len)
@@ -137,8 +137,8 @@ int deriveAndSignFinish(zil_ecschnorr_t *T, uint32_t index, unsigned char *dst, 
     PRINTF("deriveAndSignFinish: signature: %.*H\n", SCHNORR_SIG_LEN_RS, dst);
 
     // Erase private keys for better security.
-    memset(keySeed, 0, sizeof(keySeed));
-    memset(&privateKey, 0, sizeof(privateKey));
+    explicit_bzero(keySeed, sizeof(keySeed));
+    explicit_bzero(&privateKey, sizeof(privateKey));
     CHECK_CANARY;
 
     return s;

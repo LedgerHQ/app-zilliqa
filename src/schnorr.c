@@ -143,7 +143,7 @@ int zil_ecschnorr_sign_finish(
   }
 
   // Clear for security reasons.
-  memset(T->K, 0, size);
+  explicit_bzero(T->K, size);
 
   // Move the (r,s) signature to the destination.
   memmove (sig, R, size);
