@@ -105,7 +105,7 @@ void handleSignHash(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t dataLe
 	snprintf(ctx->indexStr, sizeof(ctx->indexStr), "with Key #%d?", ctx->keyIndex);
 
 	// Read the hash.
-	os_memmove(ctx->hash, dataBuffer+4, sizeof(ctx->hash));
+	memmove(ctx->hash, dataBuffer+4, sizeof(ctx->hash));
 	// Prepare to display the comparison screen by converting the hash to hex
 	snprintf(ctx->hexHash, sizeof(ctx->hexHash), "%.*h", sizeof(ctx->hash), ctx->hash);
 	PRINTF("hash:    %.*H \n", 32, ctx->hash);

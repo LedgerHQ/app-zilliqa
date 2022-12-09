@@ -46,7 +46,7 @@ static int prepareZilPubKeyAddr()
     // 1. Generate public key
     deriveZilPubKey(ctx->keyIndex, &publicKey);
     assert(publicKey.W_len == PUBLIC_KEY_BYTES_LEN);
-    os_memmove(G_io_apdu_buffer + tx, publicKey.W, publicKey.W_len);
+    memmove(G_io_apdu_buffer + tx, publicKey.W, publicKey.W_len);
     tx += publicKey.W_len;
     // 2. Generate address from public key.
     uint8_t bytesAddr[PUB_ADDR_BYTES_LEN];
@@ -168,10 +168,10 @@ void handleGetPublicKey(uint8_t p1,
 
     // Prepare the approval screen, filling in the header and body text.
     if (ctx->genAddr) {
-        os_memmove(ctx->typeStr, "Generate Address", 17);
+        memmove(ctx->typeStr, "Generate Address", 17);
     }
     else {
-        os_memmove(ctx->typeStr, "Generate Public", 16);
+        memmove(ctx->typeStr, "Generate Public", 16);
     }
     snprintf(ctx->keyStr, sizeof(ctx->keyStr), "Key #%d?", ctx->keyIndex);
 
