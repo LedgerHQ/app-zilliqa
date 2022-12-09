@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include "schnorr.h"
 #include "zilliqa.h"
 
@@ -125,6 +127,7 @@ int zil_ecschnorr_sign_finish(
   zil_ecschnorr_t *T, const cx_ecfp_private_key_t *pv_key,
   unsigned char *sig, unsigned int sig_len)
 {
+  UNUSED(sig_len);
   cx_curve_weierstrass_t WIDE const *domain = &C_cx_secp256k1;
   unsigned int size = domain->length;
   unsigned char R[32];

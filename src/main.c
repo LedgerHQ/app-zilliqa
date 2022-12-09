@@ -298,12 +298,13 @@ static void zil_main(void) {
 
 // override point, but nothing more to do
 void io_seproxyhal_display(const bagl_element_t *element) {
-	io_seproxyhal_display_default((bagl_element_t *)element);
+	io_seproxyhal_display_default(element);
 }
 
 unsigned char G_io_seproxyhal_spi_buffer[IO_SEPROXYHAL_BUFFER_SIZE_B];
 
 unsigned char io_event(unsigned char channel) {
+	UNUSED(channel);
 	// can't have more than one tag in the reply, not supported yet.
 	switch (G_io_seproxyhal_spi_buffer[0]) {
 	case SEPROXYHAL_TAG_FINGER_EVENT:

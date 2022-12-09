@@ -30,7 +30,7 @@
 // signHash-related function.
 static signHashContext_t * const ctx = &global.signHashContext;
 
-static void do_approve(const bagl_element_t *e)
+static void do_approve(void)
 {
 		// Derive the secret key and sign the hash, storing the signature in
 		// the APDU buffer.
@@ -44,7 +44,7 @@ static void do_approve(const bagl_element_t *e)
 		ui_idle();
 }
 
-static void do_reject(const bagl_element_t *e)
+static void do_reject(void)
 {
     io_exchange_with_code(SW_USER_REJECTED, 0);
     ui_idle();
@@ -68,7 +68,7 @@ UX_FLOW_DEF_NOCB(
 UX_FLOW_DEF_VALID(
     ux_signhash_flow_3_step,
     pn,
-    do_approve(NULL),
+    do_approve(),
     {
       &C_icon_validate_14,
       "Sign",
@@ -76,7 +76,7 @@ UX_FLOW_DEF_VALID(
 UX_FLOW_DEF_VALID(
     ux_signhash_flow_4_step,
     pn,
-    do_reject(NULL),
+    do_reject(),
     {
       &C_icon_crossmark,
       "Cancel",
@@ -94,6 +94,10 @@ UX_FLOW(ux_signhash_flow,
 // dataBuffer, initializing the command context, and displaying the first
 // screen of the command.
 void handleSignHash(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t dataLength, volatile unsigned int *flags, volatile unsigned int *tx) {
+	UNUSED(p1);
+	UNUSED(p2);
+	UNUSED(tx);
+
 	if (dataLength != sizeof(uint32_t) + sizeof(ctx->hash)) {
 		FAIL("Incorrect dataLength calling handleSignHash");
 	}

@@ -77,7 +77,7 @@ static int prepareZilPubKeyAddr()
     return tx;
 }
 
-static void do_approve(const bagl_element_t *e)
+static void do_approve(void)
 {
     // tx must ideally be gotten from prepareZilPubKeyAddr(),
     // but our flow makes it a bit difficult. So this is a hack.
@@ -86,7 +86,7 @@ static void do_approve(const bagl_element_t *e)
     ui_idle();
 }
 
-static void do_reject(const bagl_element_t *e)
+static void do_reject(void)
 {
     io_exchange_with_code(SW_USER_REJECTED, 0);
     ui_idle();
@@ -110,7 +110,7 @@ UX_STEP_NOCB(
 UX_STEP_VALID(
     ux_display_public_flow_3_step,
     pb,
-    do_approve(NULL),
+    do_approve(),
     {
       &C_icon_validate_14,
       "Approve",
@@ -118,7 +118,7 @@ UX_STEP_VALID(
 UX_STEP_VALID(
     ux_display_public_flow_4_step,
     pb,
-    do_reject(NULL),
+    do_reject(),
     {
       &C_icon_crossmark,
       "Reject",
@@ -144,6 +144,8 @@ void handleGetPublicKey(uint8_t p1,
                         uint16_t dataLength,
                         volatile unsigned int *flags,
                         volatile unsigned int *tx) {
+    UNUSED(p1);
+    UNUSED(tx);
     // Sanity-check the command parameters.
     if ((p2 != P2_DISPLAY_ADDRESS) && (p2 != P2_DISPLAY_PUBKEY)) {
         // Although THROW is technically a general-purpose exception

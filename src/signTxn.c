@@ -13,7 +13,7 @@
 
 static signTxnContext_t * const ctx = &global.signTxnContext;
 
-static void do_approve(const bagl_element_t *e)
+static void do_approve(void)
 {
 		assert(IO_APDU_BUFFER_SIZE >= SCHNORR_SIG_LEN_RS);
 		memcpy(G_io_apdu_buffer, ctx->signature, SCHNORR_SIG_LEN_RS);
@@ -23,7 +23,7 @@ static void do_approve(const bagl_element_t *e)
 		ui_idle();
 }
 
-static void do_reject(const bagl_element_t *e)
+static void do_reject(void)
 {
     io_exchange_with_code(SW_USER_REJECTED, 0);
     ui_idle();
@@ -75,7 +75,7 @@ UX_FLOW_DEF_NOCB(
 UX_FLOW_DEF_VALID(
     ux_signmsg_flow_7_step,
     pn,
-    do_approve(NULL),
+    do_approve(),
     {
       &C_icon_validate_14,
       "Sign",
@@ -83,7 +83,7 @@ UX_FLOW_DEF_VALID(
 UX_FLOW_DEF_VALID(
     ux_signmsg_flow_8_step,
     pn,
-    do_reject(NULL),
+    do_reject(),
     {
       &C_icon_crossmark,
       "Cancel",
@@ -223,6 +223,7 @@ static bool decode_and_store_in_ctx(pb_istream_t *stream, char* buffer, uint32_t
 
 static bool decode_code_callback (pb_istream_t *stream, const pb_field_t *field, void **arg)
 {
+	UNUSED(arg);
 	if (field->tag != ProtoTransactionCoreInfo_code_tag) {
 		FAIL("Unexpected data");
 	}
@@ -231,6 +232,7 @@ static bool decode_code_callback (pb_istream_t *stream, const pb_field_t *field,
 
 static bool decode_data_callback (pb_istream_t *stream, const pb_field_t *field, void **arg)
 {
+	UNUSED(arg);
 	if (field->tag != ProtoTransactionCoreInfo_data_tag) {
 		FAIL("Unexpected data");
 	}
@@ -239,6 +241,7 @@ static bool decode_data_callback (pb_istream_t *stream, const pb_field_t *field,
 
 static bool decode_toaddr_callback (pb_istream_t *stream, const pb_field_t *field, void **arg)
 {
+	UNUSED(arg);
 	uint8_t buf[PUB_ADDR_BYTES_LEN];
 	char buf2[BECH32_ENCODE_BUF_LEN];
 
@@ -391,7 +394,9 @@ static bool sign_deserialize_stream(const uint8_t *txn1, int txn1Len, int hostBy
 }
 
 void handleSignTxn(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t dataLength, volatile unsigned int *flags, volatile unsigned int *tx) {
-
+	UNUSED(p1);
+	UNUSED(p2);
+	UNUSED(tx);
 	int txnLen, hostBytesLeft;
 
 	static const int dataIndexOffset = 0;      // offset for the key index to use
