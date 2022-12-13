@@ -40,16 +40,25 @@ static void do_approve(void)
 		// Send the data in the APDU buffer, which is a 64 byte signature.
 		assert(IO_APDU_BUFFER_SIZE >= SCHNORR_SIG_LEN_RS);
 		io_exchange_with_code(SW_OK, SCHNORR_SIG_LEN_RS);
+#ifdef HAVE_BAGL
 		// Return to the main screen.
 		ui_idle();
+#else
+		nbgl_useCaseStatus("TRANSACTION\nSIGNED", true, ui_idle);
+#endif
 }
 
 static void do_reject(void)
 {
     io_exchange_with_code(SW_USER_REJECTED, 0);
+#ifdef HAVE_BAGL
     ui_idle();
+#else
+    nbgl_useCaseStatus("Transaction rejected", false, ui_idle);
+#endif
 }
 
+#ifdef HAVE_BAGL
 UX_FLOW_DEF_NOCB(
     ux_signhash_flow_1_step,
     pnn,
@@ -89,6 +98,63 @@ UX_FLOW(ux_signhash_flow,
   &ux_signhash_flow_4_step
 );
 
+void ui_display_sign_hash_flow(void) {
+	// Generate a string for the index.
+	snprintf(ctx->indexStr, sizeof(ctx->indexStr), "with Key #%d?", ctx->keyIndex);
+
+	ux_flow_init(0, ux_signhash_flow, NULL);
+}
+
+#else // HAVE_BAGL
+
+static nbgl_layoutTagValue_t pair;
+static nbgl_layoutTagValueList_t pairList = {0};
+static nbgl_pageInfoLongPress_t infoLongPress;
+
+static void transaction_rejected(void) {
+	do_reject();
+}
+
+static void reject_confirmation(void) {
+	nbgl_useCaseConfirm("Reject transaction?", NULL, "Yes, Reject", "Go back to transaction", transaction_rejected);
+}
+
+// called when long press button on 3rd page is long-touched or when reject footer is touched
+static void review_choice(bool confirm) {
+	if (confirm) {
+		do_approve();
+	} else {
+		reject_confirmation();
+	}
+}
+
+static void single_action_review_continue(void) {
+	// Setup data to display
+	pair.item = "Hash";
+	pair.value = ctx->hexHash;
+
+	pairList.nbMaxLinesForValue = 0;
+	pairList.nbPairs = 1;
+	pairList.pairs = &pair;
+
+	infoLongPress.icon = &C_zilliqa_stax_64px;
+	infoLongPress.text = "Sign transaction";
+	infoLongPress.longPressText = "Hold to sign";
+
+	nbgl_useCaseStaticReview(&pairList, &infoLongPress, "Reject transaction", review_choice);
+}
+
+void ui_display_sign_hash_flow(void) {
+	snprintf(ctx->indexStr, sizeof(ctx->indexStr), "Using key index %d", ctx->keyIndex);
+	nbgl_useCaseReviewStart(&C_zilliqa_stax_64px,
+							"Review SHA256 hash\ntransaction",
+							ctx->indexStr,
+							"Reject transaction",
+							single_action_review_continue,
+							reject_confirmation);
+}
+#endif // HAVE_BAGL
+
 // handleSignHash is the entry point for the signHash command. Like all
 // command handlers, it is responsible for reading command data from
 // dataBuffer, initializing the command context, and displaying the first
@@ -105,8 +171,6 @@ void handleSignHash(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t dataLe
 	// Read the index of the signing key. U4LE is a helper macro for
 	// converting a 4-byte buffer to a uint32_t.
 	ctx->keyIndex = U4LE(dataBuffer, 0);
-	// Generate a string for the index.
-	snprintf(ctx->indexStr, sizeof(ctx->indexStr), "with Key #%d?", ctx->keyIndex);
 
 	// Read the hash.
 	memmove(ctx->hash, dataBuffer+4, sizeof(ctx->hash));
@@ -115,7 +179,7 @@ void handleSignHash(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t dataLe
 	PRINTF("hash:    %.*H \n", 32, ctx->hash);
 	PRINTF("hexHash: %.*H \n", 64, ctx->hexHash);
 
-	ux_flow_init(0, ux_signhash_flow, NULL);
+	ui_display_sign_hash_flow();
 
 	// Set the IO_ASYNC_REPLY flag. This flag tells zil_main that we aren't
 	// sending data to the computer immediately; we need to wait for a button

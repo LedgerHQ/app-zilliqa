@@ -6,6 +6,9 @@
 #include "qatozil.h"
 #include "txn.pb.h"
 #include "ux.h"
+#ifdef HAVE_NBGL
+#include "nbgl_use_case.h"
+#endif
 
 #define TXN_BUF_SIZE 256
 #define TXN_DISP_CODE_MAX_LEN 500 // Probably quite generous on Nano screens...

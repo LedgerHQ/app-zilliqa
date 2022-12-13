@@ -19,16 +19,25 @@ static void do_approve(void)
 		memcpy(G_io_apdu_buffer, ctx->signature, SCHNORR_SIG_LEN_RS);
 		// Send the data in the APDU buffer, which is a 64 byte signature.
 		io_exchange_with_code(SW_OK, SCHNORR_SIG_LEN_RS);
+#ifdef HAVE_BAGL
 		// Return to the main screen.
 		ui_idle();
+#else
+		nbgl_useCaseStatus("TRANSACTION\nSIGNED", true, ui_idle);
+#endif
 }
 
 static void do_reject(void)
 {
     io_exchange_with_code(SW_USER_REJECTED, 0);
+#ifdef HAVE_BAGL
     ui_idle();
+#else
+    nbgl_useCaseStatus("Transaction rejected", false, ui_idle);
+#endif
 }
 
+#ifdef HAVE_BAGL
 UX_FLOW_DEF_NOCB(
     ux_signmsg_flow_1_step,
     pnn,
@@ -118,6 +127,89 @@ UX_FLOW(ux_signmsg_code_data_flow,
   &ux_signmsg_flow_6_step,
   &ux_signmsg_flow_7_step,
   &ux_signmsg_flow_8_step);
+
+void ui_display_sign_txn_flow(void) {
+	// Generate a string for the index.
+	snprintf(ctx->indexStr, sizeof(ctx->indexStr), "with Key #%d?", ctx->keyIndex);
+
+	if (ctx->codeStr[0] == '\0') {
+		if (ctx->dataStr[0] == '\0') {
+			ux_flow_init(0, ux_signmsg_simple_flow, NULL);
+		} else {
+			ux_flow_init(0, ux_signmsg_data_flow, NULL);
+		}
+	} else {
+		ux_flow_init(0, ux_signmsg_code_data_flow, NULL);
+	}
+}
+
+#else // HAVE_BAGL
+
+static nbgl_layoutTagValue_t pairs[5];
+static nbgl_layoutTagValueList_t pairList = {0};
+static nbgl_pageInfoLongPress_t infoLongPress;
+
+static void transaction_rejected(void) {
+	do_reject();
+}
+
+static void reject_confirmation(void) {
+	nbgl_useCaseConfirm("Reject transaction?", NULL, "Yes, Reject", "Go back to transaction", transaction_rejected);
+}
+
+// called when long press button on 3rd page is long-touched or when reject footer is touched
+static void review_choice(bool confirm) {
+	if (confirm) {
+		do_approve();
+	} else {
+		reject_confirmation();
+	}
+}
+
+static void single_action_review_continue(void) {
+	// Setup data to display
+	pairs[0].item = "To";
+	pairs[0].value = ctx->toAddrStr;
+	pairs[1].item = "Amount (ZIL)";
+	pairs[1].value = ctx->amountStr;
+	pairs[2].item = "Gasprice (ZIL)";
+	pairs[2].value = ctx->gaspriceStr;
+
+	if (ctx->codeStr[0] == '\0') {
+		if (ctx->dataStr[0] == '\0') {
+			pairList.nbPairs = 3;
+		} else {
+			pairs[3].item = "Contract data";
+			pairs[3].value = ctx->dataStr;
+			pairList.nbPairs = 4;
+		}
+	} else {
+		pairs[3].item = "Contract code";
+		pairs[3].value = ctx->codeStr;
+		pairs[4].item = "Contract data";
+		pairs[4].value = ctx->dataStr;
+		pairList.nbPairs = 5;
+	}
+
+	pairList.nbMaxLinesForValue = 0;
+	pairList.pairs = pairs;
+	infoLongPress.icon = &C_zilliqa_stax_64px;
+	infoLongPress.text = "Sign transaction";
+	infoLongPress.longPressText = "Hold to sign";
+
+	nbgl_useCaseStaticReview(&pairList, &infoLongPress, "Reject transaction", review_choice);
+}
+
+void ui_display_sign_txn_flow(void) {
+	snprintf(ctx->indexStr, sizeof(ctx->indexStr), "Using key index %d", ctx->keyIndex);
+	nbgl_useCaseReviewStart(&C_zilliqa_stax_64px,
+							"Review transaction",
+							ctx->indexStr,
+							"Reject transaction",
+							single_action_review_continue,
+							reject_confirmation);
+}
+#endif // HAVE_BAGL
 
 static bool istream_callback (pb_istream_t *stream, pb_byte_t *buf, size_t count)
 {
@@ -411,8 +503,6 @@ void handleSignTxn(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t dataLen
 
   // Read the various integers at the beginning.
 	ctx->keyIndex = U4LE(dataBuffer, dataIndexOffset);
-	// Generate a string for the index.
-	snprintf(ctx->indexStr, sizeof(ctx->indexStr), "with Key #%d?", ctx->keyIndex);
 
 	PRINTF("handleSignTxn: keyIndex: %d \n", ctx->keyIndex);
 	hostBytesLeft = U4LE(dataBuffer, dataHostBytesLeftOffset);
@@ -433,15 +523,7 @@ void handleSignTxn(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t dataLen
 		FAIL("sign_deserialize_stream failed");
 	}
 
-	if (ctx->codeStr[0] == '\0') {
-		if (ctx->dataStr[0] == '\0') {
-			ux_flow_init(0, ux_signmsg_simple_flow, NULL);
-		} else {
-			ux_flow_init(0, ux_signmsg_data_flow, NULL);
-		}
-	} else {
-		ux_flow_init(0, ux_signmsg_code_data_flow, NULL);
-	}
+	ui_display_sign_txn_flow();
 
 	// Set the IO_ASYNC_REPLY flag. This flag tells zil_main that we aren't
 	// sending data to the computer immediately; we need to wait for a button
