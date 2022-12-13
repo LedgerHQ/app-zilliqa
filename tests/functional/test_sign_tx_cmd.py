@@ -8,6 +8,7 @@ from apps.zilliqa import ZilliqaClient, ErrorType
 from apps.txn_pb2 import ByteArray, ProtoTransactionCoreInfo
 
 from utils import ROOT_SCREENSHOT_PATH, get_nano_review_instructions
+from utils import get_fat_review_instructions
 
 ZILLIQA_KEY_INDEX = 1
 
@@ -57,8 +58,10 @@ def test_sign_tx_simple_accepted(test_name, firmware, backend, navigator):
     # approve screen both displaying "Sign" text.
     if firmware.device == "nanos":
         instructions = get_nano_review_instructions(6)
-    else:
+    elif firmware.device.startswith("nano"):
         instructions = get_nano_review_instructions(4)
+    else:
+        instructions = get_fat_review_instructions(2)
     check_transaction(test_name, backend, navigator, transaction, instructions)
 
 
@@ -78,16 +81,34 @@ def test_sign_tx_simple_refused(test_name, firmware, backend, navigator):
     ).SerializeToString()
 
     client = ZilliqaClient(backend)
-    with client.send_async_sign_transaction_message(ZILLIQA_KEY_INDEX, transaction):
-        backend.raise_policy = RaisePolicy.RAISE_NOTHING
-        navigator.navigate_until_text_and_compare(NavIns(NavInsID.RIGHT_CLICK),
-                                                  [NavIns(NavInsID.BOTH_CLICK)],
-                                                  "Cancel",
-                                                  ROOT_SCREENSHOT_PATH,
-                                                  test_name)
-    rapdu = client.get_async_response()
-    assert rapdu.status == ErrorType.SW_USER_REJECTED
-    assert len(rapdu.data) == 0
+
+    if firmware.device.startswith("nano"):
+        with client.send_async_sign_transaction_message(ZILLIQA_KEY_INDEX, transaction):
+            backend.raise_policy = RaisePolicy.RAISE_NOTHING
+            navigator.navigate_until_text_and_compare(NavIns(NavInsID.RIGHT_CLICK),
+                                                      [NavIns(NavInsID.BOTH_CLICK)],
+                                                      "Cancel",
+                                                      ROOT_SCREENSHOT_PATH,
+                                                      test_name)
+        rapdu = client.get_async_response()
+        assert rapdu.status == ErrorType.SW_USER_REJECTED
+        assert len(rapdu.data) == 0
+    else:
+        instructions_set = []
+        for i in range(3):
+            instructions_set.append([NavIns(NavInsID.USE_CASE_REVIEW_TAP)] * i +
+                                    [NavIns(NavInsID.USE_CASE_REVIEW_REJECT)] +
+                                    [NavIns(NavInsID.USE_CASE_CHOICE_CONFIRM)] +
+                                    [NavIns(NavInsID.USE_CASE_STATUS_WAIT)])
+        for i, instructions in enumerate(instructions_set):
+            with client.send_async_sign_transaction_message(ZILLIQA_KEY_INDEX, transaction):
+                backend.raise_policy = RaisePolicy.RAISE_NOTHING
+                navigator.navigate_and_compare(ROOT_SCREENSHOT_PATH,
+                                               test_name + f"/part{i}",
+                                               instructions)
+            rapdu = client.get_async_response()
+            assert rapdu.status == ErrorType.SW_USER_REJECTED
+            assert len(rapdu.data) == 0
 
 
 def test_sign_tx_data_accepted(test_name, firmware, backend, navigator):
@@ -110,8 +131,10 @@ def test_sign_tx_data_accepted(test_name, firmware, backend, navigator):
     # approve screen both displaying "Sign" text.
     if firmware.device == "nanos":
         instructions = get_nano_review_instructions(7)
-    else:
+    elif firmware.device.startswith("nano"):
         instructions = get_nano_review_instructions(5)
+    else:
+        instructions = get_fat_review_instructions(2)
     check_transaction(test_name, backend, navigator, transaction, instructions)
 
 
@@ -136,6 +159,8 @@ def test_sign_tx_code_accepted(test_name, firmware, backend, navigator):
     # approve screen both displaying "Sign" text.
     if firmware.device == "nanos":
         instructions = get_nano_review_instructions(10)
-    else:
+    elif firmware.device.startswith("nano"):
         instructions = get_nano_review_instructions(6)
+    else:
+        instructions = get_fat_review_instructions(3)
     check_transaction(test_name, backend, navigator, transaction, instructions)
