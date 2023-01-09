@@ -4,4 +4,9 @@ dep
 obj
 src/glyphs.c
 src/glyphs.h
-compile_commands.json
+*.pyc
+tests/elfs/
+tests/functional/snapshots-tmp/
+tests/unit-tests/qatozil/*.o
+tests/unit-tests/qatozil/*.o.d
+tests/unit-tests/qatozil/qatozil
