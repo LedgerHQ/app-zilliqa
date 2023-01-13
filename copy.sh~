@@ -1,4 +1,0 @@
-cp bin/app.elf /home/tfr/coinapps/nanos/2.1.0/Zilliqa/app_0.4.2.elf
-cp bin/app.hex /home/tfr/coinapps/nanos/2.1.0/Zilliqa/app_0.4.2.hex
-cp bin/app.sha256 /home/tfr/coinapps/nanos/2.1.0/Zilliqa/app_0.4.2.sha256
-cp bin/app.apdu /home/tfr/coinapps/nanos/2.1.0/Zilliqa/app_0.4.2.apdu
