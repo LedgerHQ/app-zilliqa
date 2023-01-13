@@ -46,7 +46,7 @@ static int prepareZilPubKeyAddr()
     // 1. Generate public key
     deriveZilPubKey(ctx->keyIndex, &publicKey);
     assert(publicKey.W_len == PUBLIC_KEY_BYTES_LEN);
-    os_memmove(G_io_apdu_buffer + tx, publicKey.W, publicKey.W_len);
+    memmove(G_io_apdu_buffer + tx, publicKey.W, publicKey.W_len);
     tx += publicKey.W_len;
     // 2. Generate address from public key.
     uint8_t bytesAddr[PUB_ADDR_BYTES_LEN];
@@ -56,7 +56,7 @@ static int prepareZilPubKeyAddr()
     char bech32Str[73+3];
     bech32_addr_encode(bech32Str, "zil", bytesAddr, PUB_ADDR_BYTES_LEN);
     // Copy over the bech32 string to the apdu buffer for exchange.
-    os_memcpy(G_io_apdu_buffer + tx, bech32Str, BECH32_ADDRSTR_LEN);
+    memcpy(G_io_apdu_buffer + tx, bech32Str, BECH32_ADDRSTR_LEN);
     tx += BECH32_ADDRSTR_LEN;
 
     PRINTF("Public Key: %.*h\n", publicKey.W_len, G_io_apdu_buffer);
@@ -65,7 +65,7 @@ static int prepareZilPubKeyAddr()
     //  ctx->fullStr will contain the final text for display.
     if (ctx->genAddr) {
         // The APDU buffer contains printable bech32 string.
-        os_memcpy(ctx->fullStr, G_io_apdu_buffer + publicKey.W_len, BECH32_ADDRSTR_LEN);
+        memcpy(ctx->fullStr, G_io_apdu_buffer + publicKey.W_len, BECH32_ADDRSTR_LEN);
         assert(sizeof(ctx->fullStr) >= BECH32_ADDRSTR_LEN + 1);
         ctx->fullStr[BECH32_ADDRSTR_LEN] = '\0';
     } else {
@@ -171,7 +171,7 @@ ui_getPublicKey_compare_button(unsigned int button_mask, unsigned int button_mas
             if (ctx->displayIndex > 0) {
                 ctx->displayIndex--;
             }
-            os_memmove(ctx->partialStr, ctx->fullStr + ctx->displayIndex, 12);
+            memmove(ctx->partialStr, ctx->fullStr + ctx->displayIndex, 12);
             UX_REDISPLAY();
             break;
 
@@ -180,7 +180,7 @@ ui_getPublicKey_compare_button(unsigned int button_mask, unsigned int button_mas
             if (ctx->displayIndex < fullSize - 12) {
                 ctx->displayIndex++;
             }
-            os_memmove(ctx->partialStr, ctx->fullStr + ctx->displayIndex, 12);
+            memmove(ctx->partialStr, ctx->fullStr + ctx->displayIndex, 12);
             UX_REDISPLAY();
             break;
 
@@ -227,7 +227,7 @@ ui_getPublicKey_approve_button(unsigned int button_mask, unsigned int button_mas
 
         case BUTTON_EVT_RELEASED | BUTTON_RIGHT: // APPROVE
             // Prepare the comparison screen, filling in the header and body text.
-            os_memmove(ctx->typeStr, "Compare:", 9);
+            memmove(ctx->typeStr, "Compare:", 9);
 
             // The text to display will be put in ctx->fullStr.
             int tx = prepareZilPubKeyAddr();
@@ -236,7 +236,7 @@ ui_getPublicKey_approve_button(unsigned int button_mask, unsigned int button_mas
             // Response contains both the public key and the public address.
             io_exchange_with_code(SW_OK, tx);
 
-            os_memmove(ctx->partialStr, ctx->fullStr, 12);
+            memmove(ctx->partialStr, ctx->fullStr, 12);
             ctx->partialStr[12] = '\0';
             ctx->displayIndex = 0;
 
@@ -279,15 +279,15 @@ void handleGetPublicKey(uint8_t p1,
     {
         // Prepare the approval screen, filling in the header and body text.
         if (ctx->genAddr) {
-            os_memmove(ctx->typeStr, "Generate Address", 17);
+            memmove(ctx->typeStr, "Generate Address", 17);
         }
         else {
-            os_memmove(ctx->typeStr, "Generate Public", 16);
+            memmove(ctx->typeStr, "Generate Public", 16);
         }
         int offset = 5;
-        os_memmove(ctx->keyStr, "Key #", offset);
+        memmove(ctx->keyStr, "Key #", offset);
         int n = bin64b2dec(ctx->keyStr + offset, sizeof(ctx->keyStr)-offset, ctx->keyIndex);
-        os_memmove(ctx->keyStr + offset + n, "?", 2);
+        memmove(ctx->keyStr + offset + n, "?", 2);
 
 
 #ifdef HAVE_UX_FLOW

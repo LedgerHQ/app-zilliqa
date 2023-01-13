@@ -33,10 +33,10 @@ static signHashContext_t * const ctx = &global.signHashContext;
 // Print the key index into the indexStr buffer. 
 static void prepareIndexStr(void)
 {
-		os_memmove(ctx->indexStr, "with Key #", 10);
+		memmove(ctx->indexStr, "with Key #", 10);
 		int n = bin64b2dec(ctx->indexStr+10, sizeof(ctx->indexStr)-10, ctx->keyIndex);
 		// We copy two bytes so as to include the terminating '\0' byte for the string.
-		os_memmove(ctx->indexStr+10+n, "?", 2);
+		memmove(ctx->indexStr+10+n, "?", 2);
 }
 
 #ifdef HAVE_UX_FLOW
@@ -261,7 +261,7 @@ static unsigned int ui_signHash_compare_button(unsigned int button_mask, unsigne
 		}
 		// Use the displayIndex to recalculate the displayed portion of the
 		// text.
-		os_memmove(ctx->partialHashStr, ctx->hexHash+ctx->displayIndex, 12);
+		memmove(ctx->partialHashStr, ctx->hexHash+ctx->displayIndex, 12);
 		// Re-render the screen.
 		UX_REDISPLAY();
 		break;
@@ -271,7 +271,7 @@ static unsigned int ui_signHash_compare_button(unsigned int button_mask, unsigne
 		if (ctx->displayIndex < sizeof(ctx->hexHash)-12) {
 			ctx->displayIndex++;
 		}
-		os_memmove(ctx->partialHashStr, ctx->hexHash+ctx->displayIndex, 12);
+		memmove(ctx->partialHashStr, ctx->hexHash+ctx->displayIndex, 12);
 		UX_REDISPLAY();
 		break;
 
@@ -304,7 +304,7 @@ void handleSignHash(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t dataLe
 	}
 
 	// Read the hash.
-	os_memmove(ctx->hash, dataBuffer+4, sizeof(ctx->hash));
+	memmove(ctx->hash, dataBuffer+4, sizeof(ctx->hash));
 	// Prepare to display the comparison screen by converting the hash to hex
 	bin2hex(ctx->hexHash, sizeof(ctx->hexHash), ctx->hash, sizeof(ctx->hash));
 	PRINTF("hash:    %.*H \n", 32, ctx->hash);
@@ -315,7 +315,7 @@ void handleSignHash(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t dataLe
 #else
 
 	// and moving the first 12 characters into the partialHashStr buffer.
-	os_memmove(ctx->partialHashStr, ctx->hexHash, 12);
+	memmove(ctx->partialHashStr, ctx->hexHash, 12);
 	ctx->partialHashStr[12] = '\0';
 	ctx->displayIndex = 0;
 
