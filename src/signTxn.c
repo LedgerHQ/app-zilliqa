@@ -16,10 +16,10 @@ static signTxnContext_t * const ctx = &global.signTxnContext;
 // Print the key index into the indexStr buffer. 
 static void prepareIndexStr(void)
 {
-		os_memmove(ctx->indexStr, "with Key #", 10);
+		memmove(ctx->indexStr, "with Key #", 10);
 		int n = bin64b2dec(ctx->indexStr+10, sizeof(ctx->indexStr)-10, ctx->keyIndex);
 		// We copy two bytes so as to include the terminating '\0' byte for the string.
-		os_memmove(ctx->indexStr+10+n, "?", 2);
+		memmove(ctx->indexStr+10+n, "?", 2);
 }
 
 #ifdef HAVE_UX_FLOW
@@ -27,7 +27,7 @@ static void prepareIndexStr(void)
 static void do_approve(const bagl_element_t *e)
 {
 		assert(IO_APDU_BUFFER_SIZE >= SCHNORR_SIG_LEN_RS);
-		os_memcpy(G_io_apdu_buffer, ctx->signature, SCHNORR_SIG_LEN_RS);
+		memcpy(G_io_apdu_buffer, ctx->signature, SCHNORR_SIG_LEN_RS);
 		// Send the data in the APDU buffer, which is a 64 byte signature.
 		io_exchange_with_code(SW_OK, SCHNORR_SIG_LEN_RS);
 		// Return to the main screen.
@@ -126,7 +126,7 @@ static unsigned int ui_signHash_approve_button(unsigned int button_mask, unsigne
 
 	case BUTTON_EVT_RELEASED | BUTTON_RIGHT: // APPROVE
 		// store the signature in the APDU buffer.
-		os_memcpy(G_io_apdu_buffer, ctx->signature, SCHNORR_SIG_LEN_RS);
+		memcpy(G_io_apdu_buffer, ctx->signature, SCHNORR_SIG_LEN_RS);
 		// Send the data in the APDU buffer, along with a special code that
 		// indicates approval. 64 is the number of bytes in the response APDU,
 		// sans response code.
@@ -216,10 +216,10 @@ static unsigned int ui_signHash_compare_button(unsigned int button_mask, unsigne
 			ctx->displayIndex--;
 		}
 		// Use the displayIndex to recalculate the displayed portion of the
-		// text. os_memmove is the Ledger SDK's version of memmove (there is
-		// no os_memcpy). In practice, I don't think it matters whether you
-		// use os_memmove or the standard memmove from <string.h>.
-		os_memmove(ctx->partialMsg, ctx->msg + ctx->displayIndex, 12);
+		// text. memmove is the Ledger SDK's version of memmove (there is
+		// no memcpy). In practice, I don't think it matters whether you
+		// use memmove or the standard memmove from <string.h>.
+		memmove(ctx->partialMsg, ctx->msg + ctx->displayIndex, 12);
 		// Re-render the screen.
 		UX_REDISPLAY();
 		break;
@@ -229,7 +229,7 @@ static unsigned int ui_signHash_compare_button(unsigned int button_mask, unsigne
 		if (ctx->displayIndex < ctx->msgLen-12) {
 			ctx->displayIndex++;
 		}
-		os_memmove(ctx->partialMsg, ctx->msg + ctx->displayIndex, 12);
+		memmove(ctx->partialMsg, ctx->msg + ctx->displayIndex, 12);
 		UX_REDISPLAY();
 		break;
 
@@ -253,7 +253,7 @@ static void inline append_ctx_msg (signTxnContext_t *ctx, const char* msg, int m
 		FAIL("Display memory full");
 	}
 	
-	os_memcpy(ctx->msg + ctx->msgLen, msg, msg_len);
+	memcpy(ctx->msg + ctx->msgLen, msg, msg_len);
 	ctx->msgLen += msg_len;
 }
 
@@ -268,7 +268,7 @@ bool istream_callback (pb_istream_t *stream, pb_byte_t *buf, size_t count)
 	if (sdbufRem > 0) {
 		// We have some data to spare.
 		int copylen = MIN(sdbufRem, (int)count);
-		os_memcpy(buf, sd->buf + sd->nextIdx, copylen);
+		memcpy(buf, sd->buf + sd->nextIdx, copylen);
 		count -= copylen;
 		bufNext += copylen;
 		sd->nextIdx += copylen;
@@ -299,7 +299,7 @@ bool istream_callback (pb_istream_t *stream, pb_byte_t *buf, size_t count)
 
 			// Update and move data to our state.
 			sd->len = txnLen;
-			os_memcpy(sd->buf, G_io_apdu_buffer + dataOffset, txnLen);
+			memcpy(sd->buf, G_io_apdu_buffer + dataOffset, txnLen);
 			sd->hostBytesLeft = hostBytesLeft;
 			sd->nextIdx = 0;
 			CHECK_CANARY;
@@ -444,7 +444,7 @@ static bool decode_callback (pb_istream_t *stream, const pb_field_t *field, void
 static bool sign_deserialize_stream(const uint8_t *txn1, int txn1Len, int hostBytesLeft)
 {
 	// Initialize stream data.
-	os_memcpy(ctx->sd.buf, txn1, txn1Len);
+	memcpy(ctx->sd.buf, txn1, txn1Len);
 	ctx->sd.nextIdx = 0; ctx->sd.len = txn1Len; ctx->sd.hostBytesLeft = hostBytesLeft;
 	assert(hostBytesLeft <= ZIL_MAX_TXN_SIZE - txn1Len);
   // Setup the stream.
@@ -461,7 +461,7 @@ static bool sign_deserialize_stream(const uint8_t *txn1, int txn1Len, int hostBy
 	CHECK_CANARY;
 
 	// Initialize protobuf Txn structs.
-	os_memset(&ctx->txn, 0, sizeof(ctx->txn));
+	memset(&ctx->txn, 0, sizeof(ctx->txn));
 	// Set callbacks for handling the fields that what we need.
 	ctx->txn.toaddr.funcs.decode = decode_callback;
 	// Since we're using the same callback for amount and gasprice,
@@ -531,7 +531,7 @@ void handleSignTxn(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t dataLen
 
 	// Prepare to display the comparison screen by converting the hash to hex
 	// and moving the first 12 characters into the partialMsg buffer.
-	os_memmove(ctx->partialMsg, ctx->msg, 12);
+	memmove(ctx->partialMsg, ctx->msg, 12);
 	ctx->partialMsg[12] = '\0';
 	ctx->displayIndex = 0;
 

@@ -46,7 +46,7 @@ static int prepareZilPubKeyAddr()
     // 1. Generate public key
     deriveZilPubKey(ctx->keyIndex, &publicKey);
     assert(publicKey.W_len == PUBLIC_KEY_BYTES_LEN);
-    os_memmove(G_io_apdu_buffer + tx, publicKey.W, publicKey.W_len);
+    memmove(G_io_apdu_buffer + tx, publicKey.W, publicKey.W_len);
     tx += publicKey.W_len;
     // 2. Generate address from public key.
     uint8_t bytesAddr[PUB_ADDR_BYTES_LEN];
@@ -56,7 +56,7 @@ static int prepareZilPubKeyAddr()
     char bech32Str[73+3];
     bech32_addr_encode(bech32Str, "zil", bytesAddr, PUB_ADDR_BYTES_LEN);
     // Copy over the bech32 string to the apdu buffer for exchange.
-    os_memcpy(G_io_apdu_buffer + tx, bech32Str, BECH32_ADDRSTR_LEN);
+    memcpy(G_io_apdu_buffer + tx, bech32Str, BECH32_ADDRSTR_LEN);
     tx += BECH32_ADDRSTR_LEN;
 
     PRINTF("Public Key: %.*h\n", publicKey.W_len, G_io_apdu_buffer);
@@ -65,7 +65,7 @@ static int prepareZilPubKeyAddr()
     //  ctx->fullStr will contain the final text for display.
     if (ctx->genAddr) {
         // The APDU buffer contains printable bech32 string.
-        os_memcpy(ctx->fullStr, G_io_apdu_buffer + publicKey.W_len, BECH32_ADDRSTR_LEN);
+        memcpy(ctx->fullStr, G_io_apdu_buffer + publicKey.W_len, BECH32_ADDRSTR_LEN);
         assert(sizeof(ctx->fullStr) >= BECH32_ADDRSTR_LEN + 1);
         ctx->fullStr[BECH32_ADDRSTR_LEN] = '\0';
     } else {
@@ -171,7 +171,7 @@ ui_getPublicKey_compare_button(unsigned int button_mask, unsigned int button_mas
             if (ctx->displayIndex > 0) {
                 ctx->displayIndex--;
             }
-            os_memmove(ctx->partialStr, ctx->fullStr + ctx->displayIndex, 12);
+            memmove(ctx->partialStr, ctx->fullStr + ctx->displayIndex, 12);
             UX_REDISPLAY();
             break;
 
@@ -180,7 +180,7 @@ ui_getPublicKey_compare_button(unsigned int button_mask, unsigned int button_mas
             if (ctx->displayIndex < fullSize - 12) {
                 ctx->displayIndex++;
             }
-            os_memmove(ctx->partialStr, ctx->fullStr + ctx->displayIndex, 12);
+            memmove(ctx->partialStr, ctx->fullStr + ctx->displayIndex, 12);
             UX_REDISPLAY();
             break;
 
@@ -227,7 +227,7 @@ ui_getPublicKey_approve_button(unsigned int button_mask, unsigned int button_mas
 
         case BUTTON_EVT_RELEASED | BUTTON_RIGHT: // APPROVE
             // Prepare the comparison screen, filling in the header and body text.
-            os_memmove(ctx->typeStr, "Compare:", 9);
+            memmove(ctx->typeStr, "Compare:", 9);
 
             // The text to display will be put in ctx->fullStr.
             int tx = prepareZilPubKeyAddr();
@@ -236,7 +236,7 @@ ui_getPublicKey_approve_button(unsigned int button_mask, unsigned int button_mas
             // Response contains both the public key and the public address.
             io_exchange_with_code(SW_OK, tx);
 
-            os_memmove(ctx->partialStr, ctx->fullStr, 12);
+            memmove(ctx->partialStr, ctx->fullStr, 12);
             ctx->partialStr[12] = '\0';
             ctx->displayIndex = 0;
 
@@ -253,6 +253,7 @@ ui_getPublicKey_approve_button(unsigned int button_mask, unsigned int button_mas
 // command.
 #define P2_DISPLAY_PUBKEY  0x00
 #define P2_DISPLAY_ADDRESS 0x01
+#define P2_NO_VERIFY 0x02
 
 // handleGetPublicKey is the entry point for the getPublicKey command. It
 // reads the command parameters, prepares and displays the approval screen,
@@ -263,43 +264,42 @@ void handleGetPublicKey(uint8_t p1,
                         uint16_t dataLength,
                         volatile unsigned int *flags,
                         volatile unsigned int *tx) {
-    // Sanity-check the command parameters.
-    if ((p2 != P2_DISPLAY_ADDRESS) && (p2 != P2_DISPLAY_PUBKEY)) {
-        // Although THROW is technically a general-purpose exception
-        // mechanism, within a command handler it is basically just a
-        // convenient way of bailing out early and sending an error code to
-        // the computer. The exception will be caught by zil_main, which
-        // appends the code to the response APDU and sends it, much like
-        // io_exchange_with_code. THROW should not be called from
-        // preprocessors or button handlers.
-        THROW(SW_INVALID_PARAM);
-    }
-
     // Read the key index from dataBuffer and set the genAddr flag according
     // to p2.
     ctx->keyIndex = U4LE(dataBuffer, 0);
-    ctx->genAddr = (p2 == P2_DISPLAY_ADDRESS);
+    ctx->genAddr = ((p2 & P2_DISPLAY_ADDRESS) != 0);
 
-    // Prepare the approval screen, filling in the header and body text.
-    if (ctx->genAddr) {
-        os_memmove(ctx->typeStr, "Generate Address", 17);
+    // Checking whether we should generate the address / public key without verification
+    if((p2 & P2_NO_VERIFY) != 0)
+    {
+        unsigned int len = prepareZilPubKeyAddr();
+        io_exchange_with_code(SW_OK, len);
     }
-    else {
-        os_memmove(ctx->typeStr, "Generate Public", 16);
-    }
-    int offset = 5;
-    os_memmove(ctx->keyStr, "Key #", offset);
-    int n = bin64b2dec(ctx->keyStr + offset, sizeof(ctx->keyStr)-offset, ctx->keyIndex);
-    os_memmove(ctx->keyStr + offset + n, "?", 2);
+    else 
+    {
+        // Prepare the approval screen, filling in the header and body text.
+        if (ctx->genAddr) {
+            memmove(ctx->typeStr, "Generate Address", 17);
+        }
+        else {
+            memmove(ctx->typeStr, "Generate Public", 16);
+        }
+        int offset = 5;
+        memmove(ctx->keyStr, "Key #", offset);
+        int n = bin64b2dec(ctx->keyStr + offset, sizeof(ctx->keyStr)-offset, ctx->keyIndex);
+        memmove(ctx->keyStr + offset + n, "?", 2);
+
 
 #ifdef HAVE_UX_FLOW
-    prepareZilPubKeyAddr();
-    ux_flow_init(0, ux_display_public_flow, NULL);
+        prepareZilPubKeyAddr();
+        ux_flow_init(0, ux_display_public_flow, NULL);
 #else
-    UX_DISPLAY(ui_getPublicKey_approve, NULL);
+        UX_DISPLAY(ui_getPublicKey_approve, NULL);
 #endif
+       *flags |= IO_ASYNCH_REPLY;        
 
-    *flags |= IO_ASYNCH_REPLY;
+    }
+
 }
 
 // Having previously read through signHash.c, getPublicKey.c shouldn't be too
