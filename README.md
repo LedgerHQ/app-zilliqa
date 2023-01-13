@@ -35,3 +35,10 @@ To uninstall:
 ```sh
 make delete
 ```
+
+To run tests (TODO: Figure out how to download the elfs):
+
+```sh
+
+PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python pytest tests/functional/ -v --device nanox
+```
