@@ -4,6 +4,7 @@
 #include "os.h"
 #include "os_io_seproxyhal.h"
 #include "zilliqa.h"
+#include "qatozil.h"
 #include "zilliqa_ux.h"
 #include "pb_decode.h"
 #include "txn.pb.h"

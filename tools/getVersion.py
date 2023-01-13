@@ -1,25 +1,24 @@
 #!/usr/bin/env python3
 
-from ledgerblue.comm import getDongle
+import sys
+import argparse
 
-def apduPrefix():
-    # https://en.wikipedia.org/wiki/Smart_card_application_protocol_data_unit
-    CLA = bytes.fromhex("E0")
-    INS = b"\x01"
-    P1 = b"\x00"
-    P2 = b"\x00"
-    return CLA + INS + P1 + P2
+from pathlib import Path
 
-def exchange(apdu):
-    dongle = getDongle(True)
-    return dongle.exchange(apdu)
+from ragger.backend import LedgerCommBackend
+
+REPO_ROOT_DIRECTORY = Path(__file__).parent
+ZILLIQA_LIB_DIRECTORY = (REPO_ROOT_DIRECTORY / "../tests/functional/apps").resolve().as_posix()
+sys.path.append(ZILLIQA_LIB_DIRECTORY)
+from zilliqa import ZilliqaClient
+
 
 def main():
-    apdu = apduPrefix()
-    response = exchange(apdu)
-    if len(response) != 3:
-        raise "Invalid response length: {}".format(len(response))
-    print("v{}.{}.{}".format(response[0], response[1], response[2]))
+    with LedgerCommBackend(None, interface="hid") as backend:
+        zilliqa = ZilliqaClient(backend)
+        version = zilliqa.send_get_version()
+        print("v{}.{}.{}".format(version[0], version[1], version[2]))
+
 
 if __name__ == "__main__":
     main()

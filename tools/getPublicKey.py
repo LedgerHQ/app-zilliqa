@@ -1,42 +1,35 @@
 #!/usr/bin/env python3
 
-from ledgerblue.comm import getDongle
-from ledgerblue.commException import CommException
+import sys
 import argparse
-import struct
 
-def apduPrefix(args):
-    # https://en.wikipedia.org/wiki/Smart_card_application_protocol_data_unit
-    CLA = bytes.fromhex("E0")
-    INS = b"\x02"
-    P1 = b"\x00"
-    P2 = b"\x01" if args.dispAddr else b"\x00"
-    return CLA + INS + P1 + P2
+from pathlib import Path
 
+from ragger.backend import LedgerCommBackend
 
-def exchange(apdu):
-    dongle = getDongle(True)
-    return dongle.exchange(apdu)
+REPO_ROOT_DIRECTORY = Path(__file__).parent
+ZILLIQA_LIB_DIRECTORY = (REPO_ROOT_DIRECTORY / "../tests/functional/apps").resolve().as_posix()
+sys.path.append(ZILLIQA_LIB_DIRECTORY)
+from zilliqa import ZilliqaClient
 
 
 def main(args):
-    payload = struct.pack("<I", args.index)
-    L_c = bytes([len(payload)])
-    apdu = apduPrefix(args) + L_c + payload
-    response = exchange(apdu)
-    pubKey = response[0:33]
-    pubAddr = response[33:]
-    if args.dispAddr:
-        print("Address:", str(pubAddr, 'utf-8'))
-        print("length: ", len(pubAddr))
-    else:
-        print("Public Key:", pubKey.hex())
-        print("length: ", len(pubKey.hex()))
+    with LedgerCommBackend(None, interface="hid") as backend:
+        zilliqa = ZilliqaClient(backend)
+
+        with zilliqa.send_async_get_public_key(args.index, args.dispAddr):
+            print("Please accept the request on the device")
+        rapdu = zilliqa.get_async_response()
+        public_key, address = zilliqa.parse_get_public_key_response(rapdu.data)
+        print("Address:", address)
+        print("length: ", len(address))
+        print("Public Key:", public_key.hex())
+        print("length: ", len(public_key.hex()))
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--index', '-i', type=int, required=True)
-    parser.add_argument('--dispAddr', '-a', type=bool, required=False)
+    parser.add_argument('--dispAddr', '-a', action='store_true', required=False)
     args = parser.parse_args()
     main(args)
