@@ -146,6 +146,7 @@ const addr_to_fname_t addr_to_fnames[] = {
     { decode_callback_field, "decode_callback_field" }
 };
 
+#ifdef HAVE_PRINTF
 const char* addr_to_fname(void* func) __attribute__((no_instrument_function));
 const char* addr_to_fname(void* func){
     for(int i = 0; i < sizeof(addr_to_fnames)/sizeof(*addr_to_fnames); i++){
@@ -155,21 +156,28 @@ const char* addr_to_fname(void* func){
     }
     return "";
 }
+#endif
 
 void __cyg_profile_func_enter(void *this_fn, void *call_site) __attribute__((no_instrument_function));
 void __cyg_profile_func_enter( void *func, void *callsite )
 {
+#ifdef HAVE_PRINTF
     const char* fname = addr_to_fname(func);
     for(int i = 0; i < G_depth; i++){
         PRINTF(" ");
     }
     PRINTF("-> %p '%s' [from %p], STACK %p, left: %d\n", func, fname, callsite, &fname, ((void*)&fname) - &_ebss); //, last_stack_left - (((void*)&fname) - &_ebss));
     last_stack_left = ((void*)&fname) - &_ebss;
+#else
+    UNUSED(func);
+    UNUSED(callsite);
+#endif
     G_depth++;
 }
 void __cyg_profile_func_exit(void *this_fn, void *call_site) __attribute__((no_instrument_function));
 void __cyg_profile_func_exit( void *func, void *callsite )
 {
+#ifdef HAVE_PRINTF
     const char* fname = addr_to_fname(func);
     // last_stack_left = ((void*)&fname) - &_ebss;
     G_depth--;
@@ -178,6 +186,11 @@ void __cyg_profile_func_exit( void *func, void *callsite )
     }
     PRINTF("<- %p '%s' [from %p], left: %d\n", func, fname, callsite, ((void*)&fname) - &_ebss);
     // last_stack_left = ((void*)&fname) - &_ebss;
+#else
+    UNUSED(func);
+    UNUSED(callsite);
+    G_depth--;
+#endif
 }
 
 /*******************************
