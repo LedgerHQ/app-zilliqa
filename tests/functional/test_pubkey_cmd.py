@@ -21,7 +21,7 @@ def check_get_public_key_resp(backend, key_index, public_key):
 
 def test_get_public_key_show_addr_accepted(backend, navigator, test_name):
     client = ZilliqaClient(backend)
-    with client.send_async_get_public_key(ZILLIQA_KEY_INDEX, True, True):
+    with client.send_async_get_public_key(ZILLIQA_KEY_INDEX, True):
         navigator.navigate_until_text_and_compare(NavIns(NavInsID.RIGHT_CLICK),
                                                   [NavIns(NavInsID.BOTH_CLICK)],
                                                   "Approve",
@@ -34,7 +34,7 @@ def test_get_public_key_show_addr_accepted(backend, navigator, test_name):
 
 def test_get_public_key_show_key_accepted(backend, navigator, test_name):
     client = ZilliqaClient(backend)
-    with client.send_async_get_public_key(ZILLIQA_KEY_INDEX, False, True):
+    with client.send_async_get_public_key(ZILLIQA_KEY_INDEX, False):
         navigator.navigate_until_text_and_compare(NavIns(NavInsID.RIGHT_CLICK),
                                                   [NavIns(NavInsID.BOTH_CLICK)],
                                                   "Approve",
@@ -46,22 +46,14 @@ def test_get_public_key_show_key_accepted(backend, navigator, test_name):
 
 
 
-def test_get_public_key_show_addr_silent(backend, navigator, test_name):
+def test_get_public_key_silent(backend, navigator, test_name):
     client = ZilliqaClient(backend)
-    with client.send_async_get_public_key(ZILLIQA_KEY_INDEX, True, False):
+    with client.send_get_public_key_non_confirm(ZILLIQA_KEY_INDEX):
         pass
     response = client.get_async_response().data
     public_key, address = client.parse_get_public_key_response(response)
     check_get_public_key_resp(backend, ZILLIQA_KEY_INDEX, public_key)
 
-
-def test_get_public_key_show_key_silent(backend, navigator, test_name):
-    client = ZilliqaClient(backend)
-    with client.send_async_get_public_key(ZILLIQA_KEY_INDEX, False, False):
-        pass
-    response = client.get_async_response().data
-    public_key, address = client.parse_get_public_key_response(response)
-    check_get_public_key_resp(backend, ZILLIQA_KEY_INDEX, public_key)
 
 
 

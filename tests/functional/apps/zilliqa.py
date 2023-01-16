@@ -20,7 +20,7 @@ CLA = 0xE0
 
 P2_DISPLAY_PUBKEY = 0x00
 P2_DISPLAY_ADDRESS = 0x01
-P2_DISPLAY_NO_VERIFY = 0x02
+P2_DISPLAY_NONE = 0x02
 
 STREAM_LEN = 16  # Stream in batches of STREAM_LEN bytes each.
 
@@ -65,13 +65,19 @@ class ZilliqaClient:
 
     @contextmanager
     def send_async_get_public_key(self, index: int,
-                                  disp_addr: bool,
-                                  verify: bool = True) -> Generator[None, None, None]:
+                                  disp_addr: bool) -> Generator[None, None, None]:
         p1 = 0
         p2 = P2_DISPLAY_ADDRESS if disp_addr else P2_DISPLAY_PUBKEY
 
-        if not verify:
-            p2 |= P2_DISPLAY_NO_VERIFY
+        payload = pack("<I", index)
+        with self._backend.exchange_async(CLA, INS.INS_GET_PUBLIC_KEY,
+                                          p1, p2, payload):
+            yield
+
+    @contextmanager
+    def send_get_public_key_non_confirm(self, index: int) -> Generator[None, None, None]:
+        p1 = 0
+        p2 = P2_DISPLAY_NONE
 
         payload = pack("<I", index)
         with self._backend.exchange_async(CLA, INS.INS_GET_PUBLIC_KEY,
