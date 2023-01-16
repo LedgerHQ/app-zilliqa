@@ -22,7 +22,7 @@ docker build .  --tag builder_image
 To start developing, run:
 
 ```sh
-docker run -it -v $PWD:/ledger-app/app --user "$(id -u)":"$(id -g)" --privileged -e "DISPLAY=$DISPLAY" -v "$HOME/.Xauthority:/root/.Xauthority:ro" -v /dev/bus/usb:/dev/bus/usb builder_image:latest bash
+docker run -it -v $PWD:/ledger-app/app --user "$(id -u)":"$(id -g)" --privileged -v /dev/bus/usb:/dev/bus/usb builder_image:latest bash
 ```
 
 ## Inside Dev Environment
