@@ -13,3 +13,4 @@ tests/unit-tests/qatozil/*.o.d
 tests/unit-tests/qatozil/qatozil
 
 scan-build/
+tests/elfs/
