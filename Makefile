@@ -35,7 +35,7 @@ ICONNAME   = zilliqa-nano-s.gif
 else
 ICONNAME   = zilliqa-nano-x.gif
 endif
-APPVERSION = 0.4.5
+APPVERSION = 0.4.4
 
 # The --path argument here restricts which BIP32 paths the app is allowed to derive.
 APP_LOAD_PARAMS = --path "44'/313'" --curve secp256k1 $(COMMON_LOAD_PARAMS)
