@@ -86,6 +86,7 @@ jobs:
     strategy:
       matrix:
         include:
+          - model: nanos
           - model: nanox
           - model: nanosp
     runs-on: ubuntu-latest
