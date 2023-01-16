@@ -239,7 +239,7 @@ int bin64b2dec(uint8_t *dst, uint32_t dst_len, uint64_t n) {
 
 void print_available_stack()
 {
-    uint32_t stack_top = 0;
+    uint32_t stack_top ZILLIQA_UNUSED = 0;
     PRINTF("Stack remaining: CUR_STACK_ADDR: 0x%p, STACK_LIMIT: 0x%p, Available: %d\n", 
         &stack_top, &_stack, ((uintptr_t)&stack_top) - ((uintptr_t)&_stack));
 }

@@ -112,7 +112,7 @@ static const bagl_element_t ui_signHash_approve[] = {
 	UI_TEXT(0x00, 0, 26, 128, global.signTxnContext.indexStr)
 };
 
-static unsigned int ui_signHash_approve_button(unsigned int button_mask, unsigned int button_mask_counter) {
+static unsigned int ui_signHash_approve_button(unsigned int button_mask, unsigned int ZILLIQA_UNUSED button_mask_counter) {
 
 	switch (button_mask) {
 	case BUTTON_EVT_RELEASED | BUTTON_LEFT: // REJECT
@@ -193,7 +193,7 @@ static const bagl_element_t* ui_prepro_signHash_compare(const bagl_element_t *el
 
 // This is the button handler for the comparison screen. Unlike the approval
 // button handler, this handler doesn't send any data to the computer.
-static unsigned int ui_signHash_compare_button(unsigned int button_mask, unsigned int button_mask_counter) {
+static unsigned int ui_signHash_compare_button(unsigned int button_mask, unsigned int ZILLIQA_UNUSED button_mask_counter) {
 	switch (button_mask) {
 	// The available button mask values are LEFT, RIGHT, EVT_RELEASED, and
 	// EVT_FAST. EVT_FAST is set when a button is held for 8 "ticks," i.e.
@@ -282,7 +282,7 @@ bool istream_callback (pb_istream_t *stream, pb_byte_t *buf, size_t count)
 		if (sd->hostBytesLeft) {
 			G_io_apdu_buffer[0] = 0x90;
     	G_io_apdu_buffer[1] = 0x00;
-			unsigned rx = io_exchange(CHANNEL_APDU, 2);
+			unsigned ZILLIQA_UNUSED rx = io_exchange(CHANNEL_APDU, 2);
 			static const uint32_t hostBytesLeftOffset = OFFSET_CDATA + 0;
 			static const uint32_t txnLenOffset = OFFSET_CDATA + 4;
 			static const uint32_t dataOffset = OFFSET_CDATA + 8;
@@ -317,7 +317,7 @@ bool istream_callback (pb_istream_t *stream, pb_byte_t *buf, size_t count)
 	return true;
 }
 
-bool decode_txn_data (pb_istream_t *stream, const pb_field_t *field, void **arg)
+bool decode_txn_data (pb_istream_t *stream, const pb_field_t * ZILLIQA_UNUSED field, void ** ZILLIQA_UNUSED arg)
 {
 	size_t jsonLen = stream->bytes_left;
 	PRINTF("decode_txn_data: data length=%d\n", jsonLen);
@@ -489,7 +489,7 @@ static bool sign_deserialize_stream(const uint8_t *txn1, int txn1Len, int hostBy
 	return true;
 }
 
-void handleSignTxn(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t dataLength, volatile unsigned int *flags, volatile unsigned int *tx) {
+void handleSignTxn(uint8_t ZILLIQA_UNUSED p1, uint8_t ZILLIQA_UNUSED p2, uint8_t *dataBuffer, uint16_t ZILLIQA_UNUSED dataLength, volatile unsigned int *flags, volatile unsigned int * ZILLIQA_UNUSED tx) {
 
 	int txnLen, hostBytesLeft;
 

@@ -16,6 +16,7 @@
 #include "pb.h"
 #include "pb_decode.h"
 #include "pb_common.h"
+#include "zilliqa.h"
 
 #include "os.h"
 
@@ -157,9 +158,9 @@ const char* addr_to_fname(void* func){
 }
 
 void __cyg_profile_func_enter(void *this_fn, void *call_site) __attribute__((no_instrument_function));
-void __cyg_profile_func_enter( void *func, void *callsite )
+void __cyg_profile_func_enter( void *func, void * ZILLIQA_UNUSED callsite )
 {
-    const char* fname = addr_to_fname(func);
+    const char*  fname = addr_to_fname(func);
     for(int i = 0; i < G_depth; i++){
         PRINTF(" ");
     }
@@ -168,9 +169,9 @@ void __cyg_profile_func_enter( void *func, void *callsite )
     G_depth++;
 }
 void __cyg_profile_func_exit(void *this_fn, void *call_site) __attribute__((no_instrument_function));
-void __cyg_profile_func_exit( void *func, void *callsite )
+void __cyg_profile_func_exit( void *func, void * ZILLIQA_UNUSED  callsite )
 {
-    const char* fname = addr_to_fname(func);
+    const char* ZILLIQA_UNUSED fname = addr_to_fname(func);
     // last_stack_left = ((void*)&fname) - &_ebss;
     G_depth--;
     for(int i = 0; i < G_depth; i++){

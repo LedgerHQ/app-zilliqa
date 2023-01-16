@@ -163,7 +163,7 @@ static const bagl_element_t *ui_prepro_getPublicKey_compare(const bagl_element_t
 // Define the button handler for the comparison screen. Again, this is nearly
 // identical to the signHash comparison button handler.
 static unsigned int
-ui_getPublicKey_compare_button(unsigned int button_mask, unsigned int button_mask_counter) {
+ui_getPublicKey_compare_button(unsigned int button_mask, unsigned int ZILLIQA_UNUSED button_mask_counter) {
     int fullSize = ctx->genAddr ? BECH32_ADDRSTR_LEN : (PUBLIC_KEY_BYTES_LEN * 2);
     switch (button_mask) {
         case BUTTON_LEFT:
@@ -217,7 +217,7 @@ static const bagl_element_t ui_getPublicKey_approve[] = {
 // This is the button handler for the approval screen. If the user approves,
 // it generates and sends the public key and address.
 static unsigned int
-ui_getPublicKey_approve_button(unsigned int button_mask, unsigned int button_mask_counter) {
+ui_getPublicKey_approve_button(unsigned int button_mask, unsigned int ZILLIQA_UNUSED button_mask_counter) {
 
     switch (button_mask) {
         case BUTTON_EVT_RELEASED | BUTTON_LEFT: // REJECT
@@ -258,12 +258,12 @@ ui_getPublicKey_approve_button(unsigned int button_mask, unsigned int button_mas
 // handleGetPublicKey is the entry point for the getPublicKey command. It
 // reads the command parameters, prepares and displays the approval screen,
 // and sets the IO_ASYNC_REPLY flag.
-void handleGetPublicKey(uint8_t p1,
+void handleGetPublicKey(uint8_t ZILLIQA_UNUSED p1,
                         uint8_t p2,
                         uint8_t *dataBuffer,
-                        uint16_t dataLength,
+                        uint16_t ZILLIQA_UNUSED dataLength,
                         volatile unsigned int *flags,
-                        volatile unsigned int *tx) {
+                        volatile unsigned int * ZILLIQA_UNUSED tx) {
     // Read the key index from dataBuffer and set the genAddr flag according
     // to p2.
     ctx->keyIndex = U4LE(dataBuffer, 0);

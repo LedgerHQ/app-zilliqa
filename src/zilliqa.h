@@ -19,6 +19,7 @@
 #define DER_DECODE_ZILLIQA 0
 
 // MACROS
+#define ZILLIQA_UNUSED __attribute__((unused))
 #define PLOC() PRINTF("\n%s - %s:%d \n", __FILE__, __func__, __LINE__);
 #define assert(x) \
     if (x) {} else { PLOC(); PRINTF("Assertion failed\n"); THROW (EXCEPTION); }

@@ -4,16 +4,11 @@ Zilliqa wallet application for Nano S and Nano X.
 
 ## Development Environment
 
-To build environment:
+We use the developement environment provided by Ledger through the docker image
+`ledger-app-builder-lite:latest`. To start developing, run:
 
 ```sh
-docker build .  --tag builder_image
-```
-
-To start developing:
-
-```sh
-docker run -it -v $PWD:/ledger-app/app --privileged -v /dev/bus/usb:/dev/bus/usb builder_image:latest bash
+docker run -it -v $PWD:/app --user "$(id -u)":"$(id -g)" -v /dev/bus/usb:/dev/bus/usb  ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder-lite:latest
 ```
 
 ## Inside Dev Environment
@@ -30,15 +25,20 @@ To load the app:
 make load
 ```
 
+Note that in order to load, you may need to run the Docker image as privileged:
+
+```sh
+docker run -it -v $PWD:/app --privileged -v /dev/bus/usb:/dev/bus/usb  ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder-lite:latest
+```
+
 To uninstall:
 
 ```sh
 make delete
 ```
 
-To run tests (TODO: Figure out how to download the elfs):
+Static analysis:
 
 ```sh
-
-PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python pytest tests/functional/ -v --device nanox
+ make clean && scan-build --use-cc=clang -analyze-headers -enable-checker security -enable-checker unix -enable-checker valist -o scan-build --status-bugs make default
 ```

@@ -158,7 +158,7 @@ static const bagl_element_t ui_signHash_approve[] = {
 // buttons have been held for, where each tick is 100ms. I haven't come across
 // any apps that use this counter, but it could be useful for e.g. performing
 // an action only if a button is held for 3 seconds.
-static unsigned int ui_signHash_approve_button(unsigned int button_mask, unsigned int button_mask_counter) {
+static unsigned int ui_signHash_approve_button(unsigned int button_mask, unsigned int ZILLIQA_UNUSED button_mask_counter) {
 	switch (button_mask) {
 	case BUTTON_EVT_RELEASED | BUTTON_LEFT: // REJECT
 		// Send an error code to the computer. The application on the computer
@@ -237,7 +237,7 @@ static const bagl_element_t* ui_prepro_signHash_compare(const bagl_element_t *el
 
 // This is the button handler for the comparison screen. Unlike the approval
 // button handler, this handler doesn't send any data to the computer.
-static unsigned int ui_signHash_compare_button(unsigned int button_mask, unsigned int button_mask_counter) {
+static unsigned int ui_signHash_compare_button(unsigned int button_mask, unsigned int ZILLIQA_UNUSED button_mask_counter) {
 	switch (button_mask) {
 	// The available button mask values are LEFT, RIGHT, EVT_RELEASED, and
 	// EVT_FAST. EVT_FAST is set when a button is held for 8 "ticks," i.e.
@@ -292,7 +292,7 @@ static unsigned int ui_signHash_compare_button(unsigned int button_mask, unsigne
 // command handlers, it is responsible for reading command data from
 // dataBuffer, initializing the command context, and displaying the first
 // screen of the command.
-void handleSignHash(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t dataLength, volatile unsigned int *flags, volatile unsigned int *tx) {
+void handleSignHash(uint8_t ZILLIQA_UNUSED p1, uint8_t ZILLIQA_UNUSED p2, uint8_t *dataBuffer, uint16_t dataLength, volatile unsigned int *flags, volatile unsigned int * ZILLIQA_UNUSED tx) {
 	// Read the index of the signing key. U4LE is a helper macro for
 	// converting a 4-byte buffer to a uint32_t.
 	ctx->keyIndex = U4LE(dataBuffer, 0);
