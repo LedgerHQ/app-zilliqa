@@ -20,7 +20,7 @@ CLA = 0xE0
 
 P2_DISPLAY_PUBKEY = 0x00
 P2_DISPLAY_ADDRESS = 0x01
-P2_NO_VERIFY = 0x02
+P2_DISPLAY_NO_VERIFY = 0x02
 
 STREAM_LEN = 16  # Stream in batches of STREAM_LEN bytes each.
 
@@ -71,7 +71,7 @@ class ZilliqaClient:
         p2 = P2_DISPLAY_ADDRESS if disp_addr else P2_DISPLAY_PUBKEY
 
         if not verify:
-            p2 |= P2_NO_VERIFY
+            p2 |= P2_DISPLAY_NO_VERIFY
 
         payload = pack("<I", index)
         with self._backend.exchange_async(CLA, INS.INS_GET_PUBLIC_KEY,

@@ -253,7 +253,7 @@ ui_getPublicKey_approve_button(unsigned int button_mask, unsigned int ZILLIQA_UN
 // command.
 #define P2_DISPLAY_PUBKEY  0x00
 #define P2_DISPLAY_ADDRESS 0x01
-#define P2_NO_VERIFY 0x02
+#define P2_DISPLAY_NO_VERIFY 0x02
 
 // handleGetPublicKey is the entry point for the getPublicKey command. It
 // reads the command parameters, prepares and displays the approval screen,
@@ -270,7 +270,7 @@ void handleGetPublicKey(uint8_t ZILLIQA_UNUSED p1,
     ctx->genAddr = ((p2 & P2_DISPLAY_ADDRESS) != 0);
 
     // Checking whether we should generate the address / public key without verification
-    if((p2 & P2_NO_VERIFY) != 0)
+    if((p2 & P2_DISPLAY_NO_VERIFY) != 0)
     {
         unsigned int len = prepareZilPubKeyAddr();
         io_exchange_with_code(SW_OK, len);
