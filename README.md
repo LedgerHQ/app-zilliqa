@@ -2,13 +2,27 @@
 
 Zilliqa wallet application for Nano S and Nano X.
 
-## Development Environment
+## Build environment
 
-We use the developement environment provided by Ledger through the docker image
-`ledger-app-builder-lite:latest`. To start developing, run:
+Ledger provides a build environment. This can be started as:
 
 ```sh
 docker run -it -v $PWD:/app --user "$(id -u)":"$(id -g)" -v /dev/bus/usb:/dev/bus/usb  ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder-lite:latest
+```
+
+## Development Environment
+
+We also provide a separate develop environment that comes with `qemu`
+preinstalled. To build this, run
+
+```sh
+docker build .  --tag builder_image
+```
+
+To start developing, run:
+
+```sh
+docker run -it -v $PWD:/ledger-app/app --privileged -e "DISPLAY=$DISPLAY" -v "$HOME/.Xauthority:/root/.Xauthority:ro" -v /dev/bus/usb:/dev/bus/usb builder_image:latest bash
 ```
 
 ## Inside Dev Environment
