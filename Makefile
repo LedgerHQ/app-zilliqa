@@ -40,17 +40,6 @@ APPVERSION = 0.4.4
 # The --path argument here restricts which BIP32 paths the app is allowed to derive.
 APP_LOAD_PARAMS = --path "44'/313'" --curve secp256k1 $(COMMON_LOAD_PARAMS)
 APP_LOAD_FLAGS  = --appFlags 0x240
-APP_SOURCE_PATH = src
-SDK_SOURCE_PATH = lib_stusb lib_stusb_impl lib_u2f
-
-ifeq ($(TARGET_NAME),TARGET_NANOX)
-SDK_SOURCE_PATH  += lib_blewbxx lib_blewbxx_impl
-endif
-
-ifneq ($(TARGET_NAME),TARGET_NANOS)
-SDK_SOURCE_PATH  += lib_ux
-DEFINES          += HAVE_UX_FLOW
-endif
 
 APP_LOAD_PARAMS += $(APP_LOAD_FLAGS)
 
@@ -71,7 +60,38 @@ delete:
 ############
 
 DEFINES += OS_IO_SEPROXYHAL IO_SEPROXYHAL_BUFFER_SIZE_B=256
-DEFINES += HAVE_BAGL HAVE_SPRINTF HAVE_SNPRINTF_FORMAT_U
+DEFINES += HAVE_SPRINTF HAVE_SNPRINTF_FORMAT_U
+DEFINES += HAVE_IO_USB HAVE_L4_USBLIB IO_USB_MAX_ENDPOINTS=4 IO_HID_EP_LENGTH=64 HAVE_USB_APDU
+DEFINES += HAVE_BAGL HAVE_UX_FLOW
+
+# U2F
+DEFINES += HAVE_U2F HAVE_IO_U2F
+DEFINES += U2F_PROXY_MAGIC=\"w0w\"
+DEFINES += USB_SEGMENT_SIZE=64
+DEFINES += BLE_SEGMENT_SIZE=32 #max MTU, min 20
+
+#WEBUSB_URL = www.ledgerwallet.com
+#DEFINES    += HAVE_WEBUSB WEBUSB_URL_SIZE_B=$(shell echo -n $(WEBUSB_URL) | wc -c) WEBUSB_URL=$(shell echo -n $(WEBUSB_URL) | sed -e "s/./\\\'\0\\\',/g")
+DEFINES += HAVE_WEBUSB WEBUSB_URL_SIZE_B=0 WEBUSB_URL=""
+
+DEFINES += UNUSED\(x\)=\(void\)x
+DEFINES += APPVERSION=\"$(APPVERSION)\"
+
+DEFINES   += HAVE_BAGL HAVE_UX_FLOW
+
+ifeq ($(TARGET_NAME),TARGET_NANOX)
+DEFINES   += HAVE_BLE BLE_COMMAND_TIMEOUT_MS=2000
+DEFINES   += HAVE_BLE_APDU # basic ledger apdu transport over BLE
+endif
+
+ifneq ($(TARGET_NAME),TARGET_NANOS)
+DEFINES   += HAVE_GLO096
+DEFINES   += BAGL_WIDTH=128 BAGL_HEIGHT=64
+DEFINES   += HAVE_BAGL_ELLIPSIS # long label truncation feature
+DEFINES   += HAVE_BAGL_FONT_OPEN_SANS_REGULAR_11PX
+DEFINES   += HAVE_BAGL_FONT_OPEN_SANS_EXTRABOLD_11PX
+DEFINES   += HAVE_BAGL_FONT_OPEN_SANS_LIGHT_16PX
+endif
 
 # For enabling protobuf library to check for stackoverflow.
 # DEFINES += PB_CHECK_STACK_OVERFLOW
@@ -87,32 +107,13 @@ else
 DEFINES += PRINTF\(...\)=
 endif
 
-DEFINES += HAVE_IO_USB HAVE_L4_USBLIB IO_USB_MAX_ENDPOINTS=4 IO_HID_EP_LENGTH=64 HAVE_USB_APDU
-DEFINES += APPVERSION=\"$(APPVERSION)\"
-
-# U2F
-DEFINES   += HAVE_U2F HAVE_IO_U2F
-DEFINES   += U2F_PROXY_MAGIC=\"w0w\"
-DEFINES   += USB_SEGMENT_SIZE=64
-DEFINES   += BLE_SEGMENT_SIZE=32 #max MTU, min 20
-
-#WEBUSB_URL = www.ledgerwallet.com
-#DEFINES    += HAVE_WEBUSB WEBUSB_URL_SIZE_B=$(shell echo -n $(WEBUSB_URL) | wc -c) WEBUSB_URL=$(shell echo -n $(WEBUSB_URL) | sed -e "s/./\\\'\0\\\',/g")
-DEFINES   += HAVE_WEBUSB WEBUSB_URL_SIZE_B=0 WEBUSB_URL=""
+APP_SOURCE_PATH = src
+SDK_SOURCE_PATH = lib_stusb lib_stusb_impl lib_u2f lib_ux
 
 ifeq ($(TARGET_NAME),TARGET_NANOX)
-DEFINES   += HAVE_BLE BLE_COMMAND_TIMEOUT_MS=2000
-DEFINES   += HAVE_BLE_APDU # basic ledger apdu transport over BLE
+SDK_SOURCE_PATH  += lib_blewbxx lib_blewbxx_impl
 endif
 
-ifneq ($(TARGET_NAME),TARGET_NANOS)
-DEFINES   += HAVE_GLO096 HAVE_UX_LEGACY
-DEFINES   += HAVE_BAGL BAGL_WIDTH=128 BAGL_HEIGHT=64
-DEFINES   += HAVE_BAGL_ELLIPSIS # long label truncation feature
-DEFINES   += HAVE_BAGL_FONT_OPEN_SANS_REGULAR_11PX
-DEFINES   += HAVE_BAGL_FONT_OPEN_SANS_EXTRABOLD_11PX
-DEFINES   += HAVE_BAGL_FONT_OPEN_SANS_LIGHT_16PX
-endif
 
 ##############
 #  Compiler  #
@@ -120,6 +121,9 @@ endif
 
 CC := $(CLANGPATH)clang
 CFLAGS += -O3 -Os
+
+# Remove warning on custom snprintf implementation usage
+CFLAGS += -Wno-format
 
 AS := $(GCCPATH)arm-none-eabi-gcc
 LD := $(GCCPATH)arm-none-eabi-gcc

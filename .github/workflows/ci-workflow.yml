@@ -17,10 +17,10 @@ jobs:
       - name: Clone
         uses: actions/checkout@v3
 
-      - name: Install make and clang
+      - name: Install make, clang and libbsd-dev
         run: |
           sudo apt update
-          sudo apt install -y make clang
+          sudo apt install -y make clang libbsd-dev
 
       - name: Run unit tests
         run: |
@@ -86,6 +86,7 @@ jobs:
     strategy:
       matrix:
         include:
+          - model: nanos
           - model: nanox
           - model: nanosp
     runs-on: ubuntu-latest
