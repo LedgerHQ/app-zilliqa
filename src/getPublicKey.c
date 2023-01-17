@@ -46,7 +46,7 @@ static int prepareZilPubKeyAddr()
     // 1. Generate public key
     deriveZilPubKey(ctx->keyIndex, &publicKey);
     assert(publicKey.W_len == PUBLIC_KEY_BYTES_LEN);
-    os_memmove(G_io_apdu_buffer + tx, publicKey.W, publicKey.W_len);
+    memmove(G_io_apdu_buffer + tx, publicKey.W, publicKey.W_len);
     tx += publicKey.W_len;
     // 2. Generate address from public key.
     uint8_t bytesAddr[PUB_ADDR_BYTES_LEN];
@@ -56,7 +56,7 @@ static int prepareZilPubKeyAddr()
     char bech32Str[73+3];
     bech32_addr_encode(bech32Str, "zil", bytesAddr, PUB_ADDR_BYTES_LEN);
     // Copy over the bech32 string to the apdu buffer for exchange.
-    os_memcpy(G_io_apdu_buffer + tx, bech32Str, BECH32_ADDRSTR_LEN);
+    memcpy(G_io_apdu_buffer + tx, bech32Str, BECH32_ADDRSTR_LEN);
     tx += BECH32_ADDRSTR_LEN;
 
     PRINTF("Public Key: %.*h\n", publicKey.W_len, G_io_apdu_buffer);
@@ -65,19 +65,19 @@ static int prepareZilPubKeyAddr()
     //  ctx->fullStr will contain the final text for display.
     if (ctx->genAddr) {
         // The APDU buffer contains printable bech32 string.
-        os_memcpy(ctx->fullStr, G_io_apdu_buffer + publicKey.W_len, BECH32_ADDRSTR_LEN);
+        memcpy(ctx->fullStr, G_io_apdu_buffer + publicKey.W_len, BECH32_ADDRSTR_LEN);
         assert(sizeof(ctx->fullStr) >= BECH32_ADDRSTR_LEN + 1);
         ctx->fullStr[BECH32_ADDRSTR_LEN] = '\0';
     } else {
         // The APDU buffer contains the raw bytes of the public key.
         // So, first we need to convert to a human-readable form.
-        bin2hex((uint8_t *)ctx->fullStr, sizeof(ctx->fullStr), G_io_apdu_buffer, publicKey.W_len);
+        snprintf(ctx->fullStr, sizeof(ctx->fullStr), "%.*h", publicKey.W_len, G_io_apdu_buffer);
     }
 
     return tx;
 }
 
-static void do_approve(const bagl_element_t *e)
+static void do_approve(void)
 {
     // tx must ideally be gotten from prepareZilPubKeyAddr(),
     // but our flow makes it a bit difficult. So this is a hack.
@@ -86,7 +86,7 @@ static void do_approve(const bagl_element_t *e)
     ui_idle();
 }
 
-static void do_reject(const bagl_element_t *e)
+static void do_reject(void)
 {
     io_exchange_with_code(SW_USER_REJECTED, 0);
     ui_idle();
@@ -110,7 +110,7 @@ UX_STEP_NOCB(
 UX_STEP_VALID(
     ux_display_public_flow_3_step,
     pb,
-    do_approve(NULL),
+    do_approve(),
     {
       &C_icon_validate_14,
       "Approve",
@@ -118,7 +118,7 @@ UX_STEP_VALID(
 UX_STEP_VALID(
     ux_display_public_flow_4_step,
     pb,
-    do_reject(NULL),
+    do_reject(),
     {
       &C_icon_crossmark,
       "Reject",
@@ -144,6 +144,8 @@ void handleGetPublicKey(uint8_t p1,
                         uint16_t dataLength,
                         volatile unsigned int *flags,
                         volatile unsigned int *tx) {
+    UNUSED(p1);
+    UNUSED(tx);
     // Sanity-check the command parameters.
     if ((p2 != P2_DISPLAY_ADDRESS) && (p2 != P2_DISPLAY_PUBKEY)) {
         // Although THROW is technically a general-purpose exception
@@ -156,6 +158,11 @@ void handleGetPublicKey(uint8_t p1,
         THROW(SW_INVALID_PARAM);
     }
 
+    // Sanity-check the command length
+    if (dataLength != sizeof(uint32_t)) {
+        THROW(SW_WRONG_DATA_LENGTH);
+    }
+
     // Read the key index from dataBuffer and set the genAddr flag according
     // to p2.
     ctx->keyIndex = U4LE(dataBuffer, 0);
@@ -163,15 +170,12 @@ void handleGetPublicKey(uint8_t p1,
 
     // Prepare the approval screen, filling in the header and body text.
     if (ctx->genAddr) {
-        os_memmove(ctx->typeStr, "Generate Address", 17);
+        memmove(ctx->typeStr, "Generate Address", 17);
     }
     else {
-        os_memmove(ctx->typeStr, "Generate Public", 16);
+        memmove(ctx->typeStr, "Generate Public", 16);
     }
-    int offset = 5;
-    os_memmove(ctx->keyStr, "Key #", offset);
-    int n = bin64b2dec((uint8_t *)ctx->keyStr + offset, sizeof(ctx->keyStr)-offset, ctx->keyIndex);
-    os_memmove(ctx->keyStr + offset + n, "?", 2);
+    snprintf(ctx->keyStr, sizeof(ctx->keyStr), "Key #%d?", ctx->keyIndex);
 
     prepareZilPubKeyAddr();
     ux_flow_init(0, ux_display_public_flow, NULL);

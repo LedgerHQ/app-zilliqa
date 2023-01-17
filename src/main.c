@@ -231,14 +231,22 @@ static void zil_main(void) {
 				if (rx == 0) {
 					THROW(EXCEPTION_IO_RESET);
 				}
+				// Minimal APDU length
+				if (rx < OFFSET_CDATA) {
+					THROW(SW_WRONG_DATA_LENGTH);
+				}
+				// APDU length and LC field consistency
+				if (rx - OFFSET_CDATA != G_io_apdu_buffer[OFFSET_LC]) {
+					THROW(SW_WRONG_DATA_LENGTH);
+				}
 				// Malformed APDU.
 				if (G_io_apdu_buffer[OFFSET_CLA] != CLA) {
-					THROW(0x6E00);
+					THROW(SW_CLA_NOT_SUPPORTED);
 				}
 				// Lookup and call the requested command handler.
 				handler_fn_t *handlerFn = lookupHandler(G_io_apdu_buffer[OFFSET_INS]);
 				if (!handlerFn) {
-					THROW(0x6D00);
+					THROW(SW_INS_NOT_SUPPORTED);
 				}
 				INIT_CANARY;
 				handlerFn(G_io_apdu_buffer[OFFSET_P1], G_io_apdu_buffer[OFFSET_P2],
@@ -290,12 +298,13 @@ static void zil_main(void) {
 
 // override point, but nothing more to do
 void io_seproxyhal_display(const bagl_element_t *element) {
-	io_seproxyhal_display_default((bagl_element_t *)element);
+	io_seproxyhal_display_default(element);
 }
 
 unsigned char G_io_seproxyhal_spi_buffer[IO_SEPROXYHAL_BUFFER_SIZE_B];
 
 unsigned char io_event(unsigned char channel) {
+	UNUSED(channel);
 	// can't have more than one tag in the reply, not supported yet.
 	switch (G_io_seproxyhal_spi_buffer[0]) {
 	case SEPROXYHAL_TAG_FINGER_EVENT:

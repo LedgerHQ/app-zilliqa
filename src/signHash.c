@@ -30,16 +30,7 @@
 // signHash-related function.
 static signHashContext_t * const ctx = &global.signHashContext;
 
-// Print the key index into the indexStr buffer. 
-static void prepareIndexStr(void)
-{
-		os_memmove(ctx->indexStr, "with Key #", 10);
-		int n = bin64b2dec((uint8_t*)ctx->indexStr+10, sizeof(ctx->indexStr)-10, ctx->keyIndex);
-		// We copy two bytes so as to include the terminating '\0' byte for the string.
-		os_memmove(ctx->indexStr+10+n, "?", 2);
-}
-
-static void do_approve(const bagl_element_t *e)
+static void do_approve(void)
 {
 		// Derive the secret key and sign the hash, storing the signature in
 		// the APDU buffer.
@@ -53,7 +44,7 @@ static void do_approve(const bagl_element_t *e)
 		ui_idle();
 }
 
-static void do_reject(const bagl_element_t *e)
+static void do_reject(void)
 {
     io_exchange_with_code(SW_USER_REJECTED, 0);
     ui_idle();
@@ -77,7 +68,7 @@ UX_FLOW_DEF_NOCB(
 UX_FLOW_DEF_VALID(
     ux_signhash_flow_3_step,
     pn,
-    do_approve(NULL),
+    do_approve(),
     {
       &C_icon_validate_14,
       "Sign",
@@ -85,7 +76,7 @@ UX_FLOW_DEF_VALID(
 UX_FLOW_DEF_VALID(
     ux_signhash_flow_4_step,
     pn,
-    do_reject(NULL),
+    do_reject(),
     {
       &C_icon_crossmark,
       "Cancel",
@@ -103,20 +94,24 @@ UX_FLOW(ux_signhash_flow,
 // dataBuffer, initializing the command context, and displaying the first
 // screen of the command.
 void handleSignHash(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t dataLength, volatile unsigned int *flags, volatile unsigned int *tx) {
-	// Read the index of the signing key. U4LE is a helper macro for
-	// converting a 4-byte buffer to a uint32_t.
-	ctx->keyIndex = U4LE(dataBuffer, 0);
-	// Generate a string for the index.
-	prepareIndexStr();
+	UNUSED(p1);
+	UNUSED(p2);
+	UNUSED(tx);
 
 	if (dataLength != sizeof(uint32_t) + sizeof(ctx->hash)) {
 		FAIL("Incorrect dataLength calling handleSignHash");
 	}
 
+	// Read the index of the signing key. U4LE is a helper macro for
+	// converting a 4-byte buffer to a uint32_t.
+	ctx->keyIndex = U4LE(dataBuffer, 0);
+	// Generate a string for the index.
+	snprintf(ctx->indexStr, sizeof(ctx->indexStr), "with Key #%d?", ctx->keyIndex);
+
 	// Read the hash.
-	os_memmove(ctx->hash, dataBuffer+4, sizeof(ctx->hash));
+	memmove(ctx->hash, dataBuffer+4, sizeof(ctx->hash));
 	// Prepare to display the comparison screen by converting the hash to hex
-	bin2hex((uint8_t*)ctx->hexHash, sizeof(ctx->hexHash), ctx->hash, sizeof(ctx->hash));
+	snprintf(ctx->hexHash, sizeof(ctx->hexHash), "%.*h", sizeof(ctx->hash), ctx->hash);
 	PRINTF("hash:    %.*H \n", 32, ctx->hash);
 	PRINTF("hexHash: %.*H \n", 64, ctx->hexHash);
 

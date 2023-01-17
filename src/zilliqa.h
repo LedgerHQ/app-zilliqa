@@ -71,11 +71,14 @@ void print_available_stack();
 #define BECH32_ENCODE_BUF_LEN 73 + 3
 
 // exception codes
-#define SW_DEVELOPER_ERR 0x6B00
-#define SW_INVALID_PARAM 0x6B01
-#define SW_IMPROPER_INIT 0x6B02
-#define SW_USER_REJECTED 0x6985
-#define SW_OK            0x9000
+#define SW_WRONG_DATA_LENGTH 0x6A87
+#define SW_INS_NOT_SUPPORTED 0x6D00
+#define SW_CLA_NOT_SUPPORTED 0x6E00
+#define SW_DEVELOPER_ERR     0x6B00
+#define SW_INVALID_PARAM     0x6B01
+#define SW_IMPROPER_INIT     0x6B02
+#define SW_USER_REJECTED     0x6985
+#define SW_OK                0x9000
 
 // macros for converting raw bytes to uint64_t
 #define U8BE(buf, off) (((uint64_t)(U4BE(buf, off))     << 32) | ((uint64_t)(U4BE(buf, off + 4)) & 0xFFFFFFFF))
@@ -102,20 +105,5 @@ int deriveAndSignFinish(zil_ecschnorr_t *T, uint32_t index, unsigned char *dst, 
 // and uses it to produce a SCHNORR_SIG_LEN_RS length signature of the provided message
 // The key is cleared from memory after signing.
 void deriveAndSign(uint8_t *dst, uint32_t dst_len, uint32_t index, const uint8_t *msg, unsigned int msg_len);
-
-// BYTE UTILS
-
-// bin2hex converts binary to hex and appends a final NUL byte.
-void bin2hex(uint8_t *dst, uint64_t dstlen, uint8_t *data, uint64_t inlen);
-
-// bin64b2dec converts an unsigned integer to a decimal string and appends a
-// final NUL byte. It returns the length of the string.
-int bin64b2dec(uint8_t *dst, uint32_t dst_len, uint64_t n);
-
-// Given a hex string with numhexchar characters, convert it
-// to byte sequence and place in "bin" (which must be allocated
-// with at least numhexchar/2 bytes already).
-void hex2bin(const uint8_t *hexstr, unsigned numhexchars, uint8_t *bin);
-
 
 #endif

@@ -60,8 +60,8 @@ void deriveZilPubKey(uint32_t index,
 
     compressPubKey(publicKey);
 
-    os_memset(keySeed, 0, sizeof(keySeed));
-    os_memset(&pk, 0, sizeof(pk));
+    explicit_bzero(keySeed, sizeof(keySeed));
+    explicit_bzero(&pk, sizeof(pk));
     PLOC();
 }
 
@@ -83,8 +83,8 @@ void deriveAndSign(uint8_t *dst, uint32_t dst_len, uint32_t index, const uint8_t
     PRINTF("deriveAndSign: signature: %.*H\n", SCHNORR_SIG_LEN_RS, dst);
 
     // Erase private keys for better security.
-    os_memset(keySeed, 0, sizeof(keySeed));
-    os_memset(&privateKey, 0, sizeof(privateKey));
+    explicit_bzero(keySeed, sizeof(keySeed));
+    explicit_bzero(&privateKey, sizeof(privateKey));
 }
 
 void deriveAndSignInit(zil_ecschnorr_t *T, uint32_t index)
@@ -104,8 +104,8 @@ void deriveAndSignInit(zil_ecschnorr_t *T, uint32_t index)
 	CHECK_CANARY;
 
     // Erase private keys for better security.
-    os_memset(keySeed, 0, sizeof(keySeed));
-    os_memset(&privateKey, 0, sizeof(privateKey));
+    explicit_bzero(keySeed, sizeof(keySeed));
+    explicit_bzero(&privateKey, sizeof(privateKey));
 }
 
 void deriveAndSignContinue(zil_ecschnorr_t *T, const uint8_t *msg, unsigned int msg_len)
@@ -137,8 +137,8 @@ int deriveAndSignFinish(zil_ecschnorr_t *T, uint32_t index, unsigned char *dst, 
     PRINTF("deriveAndSignFinish: signature: %.*H\n", SCHNORR_SIG_LEN_RS, dst);
 
     // Erase private keys for better security.
-    os_memset(keySeed, 0, sizeof(keySeed));
-    os_memset(&privateKey, 0, sizeof(privateKey));
+    explicit_bzero(keySeed, sizeof(keySeed));
+    explicit_bzero(&privateKey, sizeof(privateKey));
     CHECK_CANARY;
 
     return s;
@@ -156,91 +156,11 @@ void pubkeyToZilAddress(uint8_t *dst, cx_ecfp_public_key_t *publicKey) {
     }
 }
 
-void bin2hex(uint8_t *dst, uint64_t dstlen, uint8_t *data, uint64_t inlen) {
-    if(dstlen < 2*inlen + 1)
-        THROW(SW_INVALID_PARAM);
-    static uint8_t const hex[] = "0123456789abcdef";
-    for (uint64_t i = 0; i < inlen; i++) {
-        dst[2 * i + 0] = hex[(data[i] >> 4) & 0x0F];
-        dst[2 * i + 1] = hex[(data[i] >> 0) & 0x0F];
-    }
-    dst[2 * inlen] = '\0';
-}
-
-static uint8_t hexchar2bin (unsigned char c) {
-    switch (c)
-    {
-        case '0': return 0x0;
-        case '1': return 0x1;
-        case '2': return 0x2;
-        case '3': return 0x3;
-        case '4': return 0x4;
-        case '5': return 0x5;
-        case '6': return 0x6;
-        case '7': return 0x7;
-        case '8': return 0x8;
-        case '9': return 0x9;
-        case 'a': case 'A': return 0xa;
-        case 'b': case 'B': return 0xb;
-        case 'c': case 'C': return 0xc;
-        case 'd': case 'D': return 0xd;
-        case 'e': case 'E': return 0xe;
-        case 'f': case 'F': return 0xf;
-    default:
-        THROW(SW_INVALID_PARAM);
-    }
-}
-
-// Given a hex string with numhexchar characters, convert it
-// to byte sequence and place in "bin" (which must be allocated
-// with at least numhexchar/2 bytes already).
-void hex2bin(const uint8_t *hexstr, unsigned numhexchars, uint8_t *bin) {
-    if (numhexchars % 2 != 0 || numhexchars == 0)
-        THROW(SW_INVALID_PARAM);
-
-    unsigned hexstr_start = 0;
-    if (hexstr[0] == '0' && (hexstr[1] == 'x' || hexstr[1] == 'X')) {
-        hexstr_start += 2;
-    }
-
-    for (unsigned binidx = 0, idx = 0; idx < numhexchars; idx += 2, binidx++) {
-        uint8_t msn = hexchar2bin(hexstr[idx+hexstr_start]);
-        msn <<= 4;
-        uint8_t lsn = hexchar2bin(hexstr[idx+hexstr_start+1]);
-        bin[binidx] = msn | lsn;
-    }
-}
-
-int bin64b2dec(uint8_t *dst, uint32_t dst_len, uint64_t n) {
-    if (n == 0) {
-        if (dst_len < 2)
-            FAIL("Insufficient destination buffer length to represent 0");
-        dst[0] = '0';
-        dst[1] = '\0';
-        return 1;
-    }
-    // determine final length
-    uint32_t len = 0;
-    for (uint64_t nn = n; nn != 0; nn /= 10) {
-        len++;
-    }
-
-    if (dst_len < len+1)
-        FAIL("Insufficient destination buffer length for decimal representation.");
-
-    // write digits in big-endian order
-    for (int i = len - 1; i >= 0; i--) {
-        dst[i] = (n % 10) + '0';
-        n /= 10;
-    }
-    dst[len] = '\0';
-    return len;
-}
-
+#ifdef HAVE_BOLOS_APP_STACK_CANARY
 void print_available_stack()
 {
     uint32_t stack_top = 0;
     PRINTF("Stack remaining: CUR_STACK_ADDR: 0x%p, STACK_LIMIT: 0x%p, Available: %d\n", 
         &stack_top, &_stack, ((uintptr_t)&stack_top) - ((uintptr_t)&_stack));
 }
-
+#endif

@@ -13,26 +13,17 @@
 
 static signTxnContext_t * const ctx = &global.signTxnContext;
 
-// Print the key index into the indexStr buffer. 
-static void prepareIndexStr(void)
-{
-		os_memmove(ctx->indexStr, "with Key #", 10);
-		int n = bin64b2dec((uint8_t*)ctx->indexStr+10, sizeof(ctx->indexStr)-10, ctx->keyIndex);
-		// We copy two bytes so as to include the terminating '\0' byte for the string.
-		os_memmove(ctx->indexStr+10+n, "?", 2);
-}
-
-static void do_approve(const bagl_element_t *e)
+static void do_approve(void)
 {
 		assert(IO_APDU_BUFFER_SIZE >= SCHNORR_SIG_LEN_RS);
-		os_memcpy(G_io_apdu_buffer, ctx->signature, SCHNORR_SIG_LEN_RS);
+		memcpy(G_io_apdu_buffer, ctx->signature, SCHNORR_SIG_LEN_RS);
 		// Send the data in the APDU buffer, which is a 64 byte signature.
 		io_exchange_with_code(SW_OK, SCHNORR_SIG_LEN_RS);
 		// Return to the main screen.
 		ui_idle();
 }
 
-static void do_reject(const bagl_element_t *e)
+static void do_reject(void)
 {
     io_exchange_with_code(SW_USER_REJECTED, 0);
     ui_idle();
@@ -84,7 +75,7 @@ UX_FLOW_DEF_NOCB(
 UX_FLOW_DEF_VALID(
     ux_signmsg_flow_7_step,
     pn,
-    do_approve(NULL),
+    do_approve(),
     {
       &C_icon_validate_14,
       "Sign",
@@ -92,7 +83,7 @@ UX_FLOW_DEF_VALID(
 UX_FLOW_DEF_VALID(
     ux_signmsg_flow_8_step,
     pn,
-    do_reject(NULL),
+    do_reject(),
     {
       &C_icon_crossmark,
       "Cancel",
@@ -139,7 +130,7 @@ static bool istream_callback (pb_istream_t *stream, pb_byte_t *buf, size_t count
 	if (sdbufRem > 0) {
 		// We have some data to spare.
 		int copylen = MIN(sdbufRem, (int)count);
-		os_memcpy(buf, sd->buf + sd->nextIdx, copylen);
+		memcpy(buf, sd->buf + sd->nextIdx, copylen);
 		count -= copylen;
 		bufNext += copylen;
 		sd->nextIdx += copylen;
@@ -154,15 +145,32 @@ static bool istream_callback (pb_istream_t *stream, pb_byte_t *buf, size_t count
 			G_io_apdu_buffer[0] = 0x90;
 			G_io_apdu_buffer[1] = 0x00;
 			unsigned rx = io_exchange(CHANNEL_APDU, 2);
+			// Sanity-check the command length
+			if (rx < OFFSET_CDATA) {
+				FAIL("Bad command length");
+			}
+			// APDU length and LC field consistency
+			if (rx - OFFSET_CDATA != G_io_apdu_buffer[OFFSET_LC]) {
+				FAIL("Bad command length");
+			}
 			static const uint32_t hostBytesLeftOffset = OFFSET_CDATA + 0;
 			static const uint32_t txnLenOffset = OFFSET_CDATA + 4;
 			static const uint32_t dataOffset = OFFSET_CDATA + 8;
+
+			// Sanity-check the command length
+			if (rx < OFFSET_CDATA + sizeof(uint32_t) + sizeof(uint32_t)) {
+				FAIL("Bad command length");
+			}
+
 			// These two cannot be made static as the function is recursive.
 			uint32_t hostBytesLeft = U4LE(G_io_apdu_buffer, hostBytesLeftOffset);
 			uint32_t txnLen = U4LE(G_io_apdu_buffer, txnLenOffset);
 			PRINTF("istream_callback: io_exchanged %d bytes\n", rx);
 			PRINTF("istream_callback: hostBytesLeft: %d\n", hostBytesLeft);
 			PRINTF("istream_callback: txnLen: %d\n", txnLen);
+			if (rx != dataOffset + txnLen) {
+				FAIL("Bad command length");
+			}
 			if (txnLen > TXN_BUF_SIZE) {
 				FAIL("Cannot handle large data sent from host");
 			}
@@ -170,7 +178,7 @@ static bool istream_callback (pb_istream_t *stream, pb_byte_t *buf, size_t count
 
 			// Update and move data to our state.
 			sd->len = txnLen;
-			os_memcpy(sd->buf, G_io_apdu_buffer + dataOffset, txnLen);
+			memcpy(sd->buf, G_io_apdu_buffer + dataOffset, txnLen);
 			sd->hostBytesLeft = hostBytesLeft;
 			sd->nextIdx = 0;
 			CHECK_CANARY;
@@ -215,6 +223,7 @@ static bool decode_and_store_in_ctx(pb_istream_t *stream, char* buffer, uint32_t
 
 static bool decode_code_callback (pb_istream_t *stream, const pb_field_t *field, void **arg)
 {
+	UNUSED(arg);
 	if (field->tag != ProtoTransactionCoreInfo_code_tag) {
 		FAIL("Unexpected data");
 	}
@@ -223,6 +232,7 @@ static bool decode_code_callback (pb_istream_t *stream, const pb_field_t *field,
 
 static bool decode_data_callback (pb_istream_t *stream, const pb_field_t *field, void **arg)
 {
+	UNUSED(arg);
 	if (field->tag != ProtoTransactionCoreInfo_data_tag) {
 		FAIL("Unexpected data");
 	}
@@ -231,6 +241,7 @@ static bool decode_data_callback (pb_istream_t *stream, const pb_field_t *field,
 
 static bool decode_toaddr_callback (pb_istream_t *stream, const pb_field_t *field, void **arg)
 {
+	UNUSED(arg);
 	uint8_t buf[PUB_ADDR_BYTES_LEN];
 	char buf2[BECH32_ENCODE_BUF_LEN];
 
@@ -332,7 +343,7 @@ static bool decode_amount_gasprice_callback (pb_istream_t *stream, const pb_fiel
 static bool sign_deserialize_stream(const uint8_t *txn1, int txn1Len, int hostBytesLeft)
 {
 	// Initialize stream data.
-	os_memcpy(ctx->sd.buf, txn1, txn1Len);
+	memcpy(ctx->sd.buf, txn1, txn1Len);
 	ctx->sd.nextIdx = 0; ctx->sd.len = txn1Len; ctx->sd.hostBytesLeft = hostBytesLeft;
 	assert(hostBytesLeft <= ZIL_MAX_TXN_SIZE - txn1Len);
   // Setup the stream.
@@ -353,7 +364,7 @@ static bool sign_deserialize_stream(const uint8_t *txn1, int txn1Len, int hostBy
 	CHECK_CANARY;
 
 	// Initialize protobuf Txn structs.
-	os_memset(&ctx->txn, 0, sizeof(ctx->txn));
+	memset(&ctx->txn, 0, sizeof(ctx->txn));
 	// Set callbacks for handling the fields that what we need.
 	ctx->txn.toaddr.funcs.decode = decode_toaddr_callback;
 	// Since we're using the same callback for amount and gasprice,
@@ -383,7 +394,9 @@ static bool sign_deserialize_stream(const uint8_t *txn1, int txn1Len, int hostBy
 }
 
 void handleSignTxn(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t dataLength, volatile unsigned int *flags, volatile unsigned int *tx) {
-
+	UNUSED(p1);
+	UNUSED(p2);
+	UNUSED(tx);
 	int txnLen, hostBytesLeft;
 
 	static const int dataIndexOffset = 0;      // offset for the key index to use
@@ -391,16 +404,24 @@ void handleSignTxn(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t dataLen
 	static const int dataTxnLenOffset = 8;     // offset for integer containing length of current txn
 	static const int dataOffset = 12;          // offset for actual transaction data.
 
+	// Sanity-check the command length
+	if (dataLength < sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint32_t)) {
+		THROW(SW_WRONG_DATA_LENGTH);
+	}
+
   // Read the various integers at the beginning.
 	ctx->keyIndex = U4LE(dataBuffer, dataIndexOffset);
 	// Generate a string for the index.
-	prepareIndexStr();
+	snprintf(ctx->indexStr, sizeof(ctx->indexStr), "with Key #%d?", ctx->keyIndex);
 
 	PRINTF("handleSignTxn: keyIndex: %d \n", ctx->keyIndex);
 	hostBytesLeft = U4LE(dataBuffer, dataHostBytesLeftOffset);
 	PRINTF("handleSignTxn: hostBytesLeft: %d \n", hostBytesLeft);
 	txnLen = U4LE(dataBuffer, dataTxnLenOffset);
 	PRINTF("handleSignTxn: txnLen: %d\n", txnLen);
+	if (dataLength != dataOffset + txnLen) {
+		THROW(SW_WRONG_DATA_LENGTH);
+	}
 	if (txnLen > TXN_BUF_SIZE) {
 		FAIL("Cannot handle large data sent from host");
 	}
