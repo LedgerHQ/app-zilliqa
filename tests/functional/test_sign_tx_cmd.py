@@ -21,7 +21,7 @@ def check_signature(client, backend, message, response):
         public_key = bytes.fromhex(ref_public_key)
     else:
         response = client.send_get_public_key_non_confirm(ZILLIQA_KEY_INDEX)
-        public_key, address = client.parse_get_public_key_response(response)
+        public_key, address = client.parse_get_public_key_response(response.data)
 
     client.verify_signature(message, response, public_key)
 

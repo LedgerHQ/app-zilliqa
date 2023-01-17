@@ -19,11 +19,9 @@ def check_signature(client, backend, message, response):
                                                                compress_public_key=True)
         public_key = bytes.fromhex(ref_public_key)
     else:
-        with client.send_async_get_public_key(ZILLIQA_KEY_INDEX, True):
-            print("Waiting for user confirmation")
-        rapdu = client.get_async_response()
-        public_key, address = client.parse_get_public_key_response(rapdu.data)
-
+        response = client.send_get_public_key_non_confirm(ZILLIQA_KEY_INDEX)
+        public_key, address = client.parse_get_public_key_response(response.data)
+        
     client.verify_signature(message, response, public_key)
 
 
