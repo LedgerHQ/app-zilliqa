@@ -71,15 +71,13 @@ static int prepareZilPubKeyAddr()
     } else {
         // The APDU buffer contains the raw bytes of the public key.
         // So, first we need to convert to a human-readable form.
-        bin2hex(ctx->fullStr, sizeof(ctx->fullStr), G_io_apdu_buffer, publicKey.W_len);
+        snprintf(ctx->fullStr, sizeof(ctx->fullStr), "%.*h", publicKey.W_len, G_io_apdu_buffer);
     }
 
     return tx;
 }
 
-#ifdef HAVE_UX_FLOW
-
-static void do_approve(const bagl_element_t *e)
+static void do_approve(void)
 {
     // tx must ideally be gotten from prepareZilPubKeyAddr(),
     // but our flow makes it a bit difficult. So this is a hack.
@@ -88,7 +86,7 @@ static void do_approve(const bagl_element_t *e)
     ui_idle();
 }
 
-static void do_reject(const bagl_element_t *e)
+static void do_reject(void)
 {
     io_exchange_with_code(SW_USER_REJECTED, 0);
     ui_idle();
@@ -99,20 +97,20 @@ UX_STEP_NOCB(
     pnn,
     {
       &C_icon_eye,
-      (char *) ctx->typeStr,
-      (char *) ctx->keyStr,
+      ctx->typeStr,
+      ctx->keyStr,
     });
 UX_STEP_NOCB(
     ux_display_public_flow_2_step,
     bnnn_paging,
     {
       .title = "Value",
-      .text = (char *) ctx->fullStr,
+      .text = ctx->fullStr,
     });
 UX_STEP_VALID(
     ux_display_public_flow_3_step,
     pb,
-    do_approve(NULL),
+    do_approve(),
     {
       &C_icon_validate_14,
       "Approve",
@@ -120,134 +118,17 @@ UX_STEP_VALID(
 UX_STEP_VALID(
     ux_display_public_flow_4_step,
     pb,
-    do_reject(NULL),
+    do_reject(),
     {
       &C_icon_crossmark,
       "Reject",
     });
 
-const ux_flow_step_t *        const ux_display_public_flow [] = {
+UX_FLOW(ux_display_public_flow,
   &ux_display_public_flow_1_step,
   &ux_display_public_flow_2_step,
   &ux_display_public_flow_3_step,
-  &ux_display_public_flow_4_step,
-  FLOW_END_STEP,
-};
-
-#else
-
-// Define the comparison screen. This is where the user will compare the
-// public key (or address) on their device to the one shown on the computer.
-static const bagl_element_t ui_getPublicKey_compare[] = {
-        UI_BACKGROUND(),
-        UI_ICON_LEFT(0x01, BAGL_GLYPH_ICON_LEFT),
-        UI_ICON_RIGHT(0x02, BAGL_GLYPH_ICON_RIGHT),
-        UI_TEXT(0x00, 0, 12, 128, "Compare:"),
-        // The visible portion of the public key or address.
-        UI_TEXT(0x00, 0, 26, 128, global.getPublicKeyContext.partialStr),
-};
-
-// Define the preprocessor for the comparison screen. As in signHash, this
-// preprocessor selectively hides the left/right arrows. The only difference
-// is that, since public keys and addresses have different lengths, checking
-// for the end of the string is slightly more complicated.
-static const bagl_element_t *ui_prepro_getPublicKey_compare(const bagl_element_t *element) {
-    int fullSize = ctx->genAddr ? BECH32_ADDRSTR_LEN : (PUBLIC_KEY_BYTES_LEN * 2);
-    if ((element->component.userid == 1 && ctx->displayIndex == 0) ||
-        (element->component.userid == 2 && ctx->displayIndex == fullSize - 12)) {
-        return NULL;
-    }
-    return element;
-}
-
-// Define the button handler for the comparison screen. Again, this is nearly
-// identical to the signHash comparison button handler.
-static unsigned int
-ui_getPublicKey_compare_button(unsigned int button_mask, unsigned int ZILLIQA_UNUSED button_mask_counter) {
-    int fullSize = ctx->genAddr ? BECH32_ADDRSTR_LEN : (PUBLIC_KEY_BYTES_LEN * 2);
-    switch (button_mask) {
-        case BUTTON_LEFT:
-        case BUTTON_EVT_FAST | BUTTON_LEFT: // SEEK LEFT
-            if (ctx->displayIndex > 0) {
-                ctx->displayIndex--;
-            }
-            memmove(ctx->partialStr, ctx->fullStr + ctx->displayIndex, 12);
-            UX_REDISPLAY();
-            break;
-
-        case BUTTON_RIGHT:
-        case BUTTON_EVT_FAST | BUTTON_RIGHT: // SEEK RIGHT
-            if (ctx->displayIndex < fullSize - 12) {
-                ctx->displayIndex++;
-            }
-            memmove(ctx->partialStr, ctx->fullStr + ctx->displayIndex, 12);
-            UX_REDISPLAY();
-            break;
-
-        case BUTTON_EVT_RELEASED | BUTTON_LEFT | BUTTON_RIGHT: // PROCEED
-            // The user has finished comparing, so return to the main screen.
-            ui_idle();
-            break;
-    }
-    return 0;
-}
-
-// Define the approval screen. This is where the user will approve the
-// generation of the public key (or address).
-static const bagl_element_t ui_getPublicKey_approve[] = {
-        UI_BACKGROUND(),
-        UI_ICON_LEFT(0x00, BAGL_GLYPH_ICON_CROSS),
-        UI_ICON_RIGHT(0x00, BAGL_GLYPH_ICON_CHECK),
-        // These two lines form a complete sentence:
-        //
-        //    Generate Public
-        //       Key #123?
-        //
-        // or:
-        //
-        //    Generate Address
-        //     from Key #123?
-        //
-        // Since both lines differ based on user-supplied parameters, we can't use
-        // compile-time string literals for either of them.
-        UI_TEXT(0x00, 0, 12, 128, global.getPublicKeyContext.typeStr),
-        UI_TEXT(0x00, 0, 26, 128, global.getPublicKeyContext.keyStr),
-};
-
-// This is the button handler for the approval screen. If the user approves,
-// it generates and sends the public key and address.
-static unsigned int
-ui_getPublicKey_approve_button(unsigned int button_mask, unsigned int ZILLIQA_UNUSED button_mask_counter) {
-
-    switch (button_mask) {
-        case BUTTON_EVT_RELEASED | BUTTON_LEFT: // REJECT
-            io_exchange_with_code(SW_USER_REJECTED, 0);
-            ui_idle();
-            break;
-
-        case BUTTON_EVT_RELEASED | BUTTON_RIGHT: // APPROVE
-            // Prepare the comparison screen, filling in the header and body text.
-            memmove(ctx->typeStr, "Compare:", 9);
-
-            // The text to display will be put in ctx->fullStr.
-            int tx = prepareZilPubKeyAddr();
-
-            // Flush the APDU buffer, sending the response.
-            // Response contains both the public key and the public address.
-            io_exchange_with_code(SW_OK, tx);
-
-            memmove(ctx->partialStr, ctx->fullStr, 12);
-            ctx->partialStr[12] = '\0';
-            ctx->displayIndex = 0;
-
-            // Display the comparison screen.
-            UX_DISPLAY(ui_getPublicKey_compare, ui_prepro_getPublicKey_compare);
-            break;
-    }
-    return 0;
-}
-
-#endif // HAVE_UX_FLOW
+  &ux_display_public_flow_4_step);
 
 // These are APDU parameters that control the behavior of the getPublicKey
 // command.
@@ -258,25 +139,46 @@ ui_getPublicKey_approve_button(unsigned int button_mask, unsigned int ZILLIQA_UN
 // handleGetPublicKey is the entry point for the getPublicKey command. It
 // reads the command parameters, prepares and displays the approval screen,
 // and sets the IO_ASYNC_REPLY flag.
-void handleGetPublicKey(uint8_t ZILLIQA_UNUSED p1,
+void handleGetPublicKey(uint8_t p1,
                         uint8_t p2,
                         uint8_t *dataBuffer,
-                        uint16_t ZILLIQA_UNUSED dataLength,
+                        uint16_t dataLength,
                         volatile unsigned int *flags,
-                        volatile unsigned int * ZILLIQA_UNUSED tx) {
+                        volatile unsigned int *tx) {
+    UNUSED(p1);
+    UNUSED(tx);
+    // Sanity-check the command parameters.
+    if ((p2 != P2_DISPLAY_ADDRESS) && (p2 != P2_DISPLAY_PUBKEY) && (p2 != P2_DISPLAY_NONE)) {
+        // Although THROW is technically a general-purpose exception
+        // mechanism, within a command handler it is basically just a
+        // convenient way of bailing out early and sending an error code to
+        // the computer. The exception will be caught by zil_main, which
+        // appends the code to the response APDU and sends it, much like
+        // io_exchange_with_code. THROW should not be called from
+        // preprocessors or button handlers.
+        THROW(SW_INVALID_PARAM);
+    }
+
+    // Sanity-check the command length
+    if (dataLength != sizeof(uint32_t)) {
+        THROW(SW_WRONG_DATA_LENGTH);
+    }
+
     // Read the key index from dataBuffer and set the genAddr flag according
     // to p2.
     ctx->keyIndex = U4LE(dataBuffer, 0);
-    ctx->genAddr = ((p2 & P2_DISPLAY_ADDRESS) != 0);
 
-    // Checking whether we should generate the address / public key without verification
     if(p2 == P2_DISPLAY_NONE)
     {
+        // In case we do we are requested to not display anything,         
         unsigned int len = prepareZilPubKeyAddr();
         io_exchange_with_code(SW_OK, len);
     }
-    else 
+    else
     {
+        // Otherwise, we display the address or public key as requested
+        ctx->genAddr = (p2 == P2_DISPLAY_ADDRESS);
+
         // Prepare the approval screen, filling in the header and body text.
         if (ctx->genAddr) {
             memmove(ctx->typeStr, "Generate Address", 17);
@@ -284,22 +186,13 @@ void handleGetPublicKey(uint8_t ZILLIQA_UNUSED p1,
         else {
             memmove(ctx->typeStr, "Generate Public", 16);
         }
-        int offset = 5;
-        memmove(ctx->keyStr, "Key #", offset);
-        int n = bin64b2dec(ctx->keyStr + offset, sizeof(ctx->keyStr)-offset, ctx->keyIndex);
-        memmove(ctx->keyStr + offset + n, "?", 2);
+        snprintf(ctx->keyStr, sizeof(ctx->keyStr), "Key #%d?", ctx->keyIndex);
 
-
-#ifdef HAVE_UX_FLOW
         prepareZilPubKeyAddr();
         ux_flow_init(0, ux_display_public_flow, NULL);
-#else
-        UX_DISPLAY(ui_getPublicKey_approve, NULL);
-#endif
-       *flags |= IO_ASYNCH_REPLY;        
 
+        *flags |= IO_ASYNCH_REPLY;
     }
-
 }
 
 // Having previously read through signHash.c, getPublicKey.c shouldn't be too

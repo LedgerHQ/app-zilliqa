@@ -7,7 +7,7 @@ from ragger.navigator import NavInsID, NavIns
 from apps.zilliqa import ZilliqaClient, ErrorType
 from apps.txn_pb2 import ByteArray, ProtoTransactionCoreInfo
 
-from utils import ROOT_SCREENSHOT_PATH
+from utils import ROOT_SCREENSHOT_PATH, get_nano_review_instructions
 
 ZILLIQA_KEY_INDEX = 1
 
@@ -38,7 +38,7 @@ def check_transaction(test_name, backend, navigator, transaction, instructions):
     check_signature(client, backend, transaction, response)
 
 
-def test_sign_tx_simple_accepted(test_name, backend, navigator):
+def test_sign_tx_simple_accepted(test_name, firmware, backend, navigator):
     senderpubkey = ByteArray(data=bytes.fromhex("0205273e54f262f8717a687250591dcfb5755b8ce4e3bd340c7abefd0de1276574"))
     toaddr = bytes.fromhex("8AD0357EBB5515F694DE597EDA6F3F6BDBAD0FD9")
     amount = ByteArray(data=(100).to_bytes(16, byteorder='big'))
@@ -55,12 +55,14 @@ def test_sign_tx_simple_accepted(test_name, backend, navigator):
 
     # Can't use navigate_until_text_and_compare because of the first screen and
     # approve screen both displaying "Sign" text.
-    instructions = [NavIns(NavInsID.RIGHT_CLICK)] * 3
-    instructions += [NavIns(NavInsID.BOTH_CLICK)]
+    if firmware.device == "nanos":
+        instructions = get_nano_review_instructions(6)
+    else:
+        instructions = get_nano_review_instructions(4)
     check_transaction(test_name, backend, navigator, transaction, instructions)
 
 
-def test_sign_tx_simple_refused(test_name, backend, firmware, navigator):
+def test_sign_tx_simple_refused(test_name, firmware, backend, navigator):
     senderpubkey = ByteArray(data=bytes.fromhex("0205273e54f262f8717a687250591dcfb5755b8ce4e3bd340c7abefd0de1276574"))
     toaddr = bytes.fromhex("8AD0357EBB5515F694DE597EDA6F3F6BDBAD0FD9")
     amount = ByteArray(data=(100).to_bytes(16, byteorder='big'))
@@ -88,7 +90,7 @@ def test_sign_tx_simple_refused(test_name, backend, firmware, navigator):
     assert len(rapdu.data) == 0
 
 
-def test_sign_tx_data_accepted(test_name, backend, navigator):
+def test_sign_tx_data_accepted(test_name, firmware, backend, navigator):
     senderpubkey = ByteArray(data=bytes.fromhex("0205273e54f262f8717a687250591dcfb5755b8ce4e3bd340c7abefd0de1276574"))
     toaddr = bytes.fromhex("8AD0357EBB5515F694DE597EDA6F3F6BDBAD0FD9")
     amount = ByteArray(data=(100).to_bytes(16, byteorder='big'))
@@ -106,12 +108,14 @@ def test_sign_tx_data_accepted(test_name, backend, navigator):
 
     # Can't use navigate_until_text_and_compare because of the first screen and
     # approve screen both displaying "Sign" text.
-    instructions = [NavIns(NavInsID.RIGHT_CLICK)] * 4
-    instructions += [NavIns(NavInsID.BOTH_CLICK)]
+    if firmware.device == "nanos":
+        instructions = get_nano_review_instructions(7)
+    else:
+        instructions = get_nano_review_instructions(5)
     check_transaction(test_name, backend, navigator, transaction, instructions)
 
 
-def test_sign_tx_code_accepted(test_name, backend, navigator):
+def test_sign_tx_code_accepted(test_name, firmware, backend, navigator):
 
     senderpubkey = ByteArray(data=bytes.fromhex("0205273e54f262f8717a687250591dcfb5755b8ce4e3bd340c7abefd0de1276574"))
     toaddr = bytes.fromhex("8AD0357EBB5515F694DE597EDA6F3F6BDBAD0FD9")
@@ -130,6 +134,8 @@ def test_sign_tx_code_accepted(test_name, backend, navigator):
 
     # Can't use navigate_until_text_and_compare because of the first screen and
     # approve screen both displaying "Sign" text.
-    instructions = [NavIns(NavInsID.RIGHT_CLICK)] * 3
-    instructions += [NavIns(NavInsID.BOTH_CLICK)]
+    if firmware.device == "nanos":
+        instructions = get_nano_review_instructions(10)
+    else:
+        instructions = get_nano_review_instructions(6)
     check_transaction(test_name, backend, navigator, transaction, instructions)

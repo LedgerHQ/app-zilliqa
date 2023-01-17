@@ -6,7 +6,7 @@ from ragger.navigator import NavInsID, NavIns
 
 from apps.zilliqa import ZilliqaClient, ErrorType
 
-from utils import ROOT_SCREENSHOT_PATH
+from utils import ROOT_SCREENSHOT_PATH, get_nano_review_instructions
 
 ZILLIQA_KEY_INDEX = 1
 
@@ -27,15 +27,17 @@ def check_signature(client, backend, message, response):
     client.verify_signature(message, response, public_key)
 
 
-def test_sign_hash_accepted(test_name, backend, navigator):
+def test_sign_hash_accepted(test_name, firmware, backend, navigator):
     message = "02E681C8EB3602CDB9261F407E2C2EE6CB9BA996AAA895677E133C02BEFC1F84"
     message_bytes = bytes.fromhex(message)
 
     client = ZilliqaClient(backend)
     # Can't use navigate_until_text_and_compare because of the first screen and
     # approve screen both displaying "Sign" text.
-    instructions = [NavIns(NavInsID.RIGHT_CLICK)] * 3
-    instructions += [NavIns(NavInsID.BOTH_CLICK)]
+    if firmware.device == "nanos":
+        instructions = get_nano_review_instructions(5)
+    else:
+        instructions = get_nano_review_instructions(3)
     with client.send_async_sign_hash_message(ZILLIQA_KEY_INDEX, message_bytes):
         navigator.navigate_and_compare(ROOT_SCREENSHOT_PATH,
                                        test_name,
