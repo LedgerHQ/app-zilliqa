@@ -10,6 +10,22 @@ Ledger provides a build environment. This can be started as:
 docker run -it -v $PWD:/app --user "$(id -u)":"$(id -g)" --privileged -v /dev/bus/usb:/dev/bus/usb  ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder-lite:latest
 ```
 
+To build the elf file, run
+
+```sh
+make BOLOS_SDK=[SDK]
+```
+
+where `[SDK]` is replaced by `${NANOS_SDK}`, `${NANOSP_SDK}` or `${NANOX_SDK}`
+
+If you wish to run the tests later on, copy the elfs as:
+
+```
+cp bin/app.elf tests/elfs/zilliqa_[device].elf
+```
+
+wehere `[device]` is `nanos`, `nanosp` or `nanox`.
+
 ## Development Environment
 
 We also provide a separate develop environment that comes with `qemu`

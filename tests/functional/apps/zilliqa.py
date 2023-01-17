@@ -80,8 +80,7 @@ class ZilliqaClient:
 
         payload = pack("<I", index)
         return self._client.exchange(CLA, INS.INS_GET_PUBLIC_KEY,
-                                     p1, p2, payload):
-            yield
+                                     p1, p2, payload)
 
     @contextmanager
     def send_async_sign_transaction_message(self,
