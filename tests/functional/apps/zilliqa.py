@@ -74,14 +74,13 @@ class ZilliqaClient:
                                           p1, p2, payload):
             yield
 
-    @contextmanager
-    def send_get_public_key_non_confirm(self, index: int) -> Generator[None, None, None]:
+    def send_get_public_key_non_confirm(self, index: int) -> RAPDU:
         p1 = 0
         p2 = P2_DISPLAY_NONE
 
         payload = pack("<I", index)
-        with self._backend.exchange_async(CLA, INS.INS_GET_PUBLIC_KEY,
-                                          p1, p2, payload):
+        return self._client.exchange(CLA, INS.INS_GET_PUBLIC_KEY,
+                                     p1, p2, payload):
             yield
 
     @contextmanager
