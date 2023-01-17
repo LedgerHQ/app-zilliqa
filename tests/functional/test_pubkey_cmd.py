@@ -48,9 +48,7 @@ def test_get_public_key_show_key_accepted(backend, navigator, test_name):
 
 def test_get_public_key_silent(backend, navigator, test_name):
     client = ZilliqaClient(backend)
-    with client.send_get_public_key_non_confirm(ZILLIQA_KEY_INDEX):
-        pass
-    response = client.get_async_response().data
+    response = client.send_get_public_key_non_confirm(ZILLIQA_KEY_INDEX):
     public_key, address = client.parse_get_public_key_response(response)
     check_get_public_key_resp(backend, ZILLIQA_KEY_INDEX, public_key)
 
