@@ -134,6 +134,7 @@ UX_FLOW(ux_display_public_flow,
 // command.
 #define P2_DISPLAY_PUBKEY  0x00
 #define P2_DISPLAY_ADDRESS 0x01
+#define P2_DISPLAY_NONE 0x02
 
 // handleGetPublicKey is the entry point for the getPublicKey command. It
 // reads the command parameters, prepares and displays the approval screen,
@@ -147,7 +148,7 @@ void handleGetPublicKey(uint8_t p1,
     UNUSED(p1);
     UNUSED(tx);
     // Sanity-check the command parameters.
-    if ((p2 != P2_DISPLAY_ADDRESS) && (p2 != P2_DISPLAY_PUBKEY)) {
+    if ((p2 != P2_DISPLAY_ADDRESS) && (p2 != P2_DISPLAY_PUBKEY) && (p2 != P2_DISPLAY_NONE)) {
         // Although THROW is technically a general-purpose exception
         // mechanism, within a command handler it is basically just a
         // convenient way of bailing out early and sending an error code to
@@ -166,21 +167,32 @@ void handleGetPublicKey(uint8_t p1,
     // Read the key index from dataBuffer and set the genAddr flag according
     // to p2.
     ctx->keyIndex = U4LE(dataBuffer, 0);
-    ctx->genAddr = (p2 == P2_DISPLAY_ADDRESS);
 
-    // Prepare the approval screen, filling in the header and body text.
-    if (ctx->genAddr) {
-        memmove(ctx->typeStr, "Generate Address", 17);
+    if (p2 == P2_DISPLAY_NONE)
+    {
+        // In case we do we are requested to not display anything,         
+        unsigned int len = prepareZilPubKeyAddr();
+        io_exchange_with_code(SW_OK, len);
     }
-    else {
-        memmove(ctx->typeStr, "Generate Public", 16);
+    else
+    {
+        // Otherwise, we display the address or public key as requested
+        ctx->genAddr = (p2 == P2_DISPLAY_ADDRESS);
+
+        // Prepare the approval screen, filling in the header and body text.
+        if (ctx->genAddr) {
+            memmove(ctx->typeStr, "Generate Address", 17);
+        }
+        else {
+            memmove(ctx->typeStr, "Generate Public", 16);
+        }
+        snprintf(ctx->keyStr, sizeof(ctx->keyStr), "Key #%d?", ctx->keyIndex);
+
+        prepareZilPubKeyAddr();
+        ux_flow_init(0, ux_display_public_flow, NULL);
+
+        *flags |= IO_ASYNCH_REPLY;
     }
-    snprintf(ctx->keyStr, sizeof(ctx->keyStr), "Key #%d?", ctx->keyIndex);
-
-    prepareZilPubKeyAddr();
-    ux_flow_init(0, ux_display_public_flow, NULL);
-
-    *flags |= IO_ASYNCH_REPLY;
 }
 
 // Having previously read through signHash.c, getPublicKey.c shouldn't be too
