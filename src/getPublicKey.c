@@ -168,7 +168,7 @@ void handleGetPublicKey(uint8_t p1,
     // to p2.
     ctx->keyIndex = U4LE(dataBuffer, 0);
 
-    if(p2 == P2_DISPLAY_NONE)
+    if (p2 == P2_DISPLAY_NONE)
     {
         // In case we do we are requested to not display anything,         
         unsigned int len = prepareZilPubKeyAddr();
