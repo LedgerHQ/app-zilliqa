@@ -79,7 +79,7 @@ class ZilliqaClient:
         p2 = P2_DISPLAY_NONE
 
         payload = pack("<I", index)
-        return self._client.exchange(CLA, INS.INS_GET_PUBLIC_KEY,
+        return self._backend.exchange(CLA, INS.INS_GET_PUBLIC_KEY,
                                      p1, p2, payload)
 
     @contextmanager
