@@ -4,49 +4,43 @@ Zilliqa wallet application for Nano S and Nano X.
 
 ## Build environment
 
-Ledger provides a build environment. This can be started as:
+To build all elfs, run:
 
 ```sh
-docker run -it -v $PWD:/app --user "$(id -u)":"$(id -g)" --privileged -v /dev/bus/usb:/dev/bus/usb  ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder-lite:latest
+docker run -it -v $PWD:/app --user "$(id -u)":"$(id -g)" ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder-lite:latest ./tools/build-all.sh
 ```
 
-To build the elf file, run
-
-```sh
-make BOLOS_SDK=[SDK]
-```
-
-where `[SDK]` is replaced by `${NANOS_SDK}`, `${NANOSP_SDK}` or `${NANOX_SDK}`
-
-If you wish to run the tests later on, copy the elfs as:
-
-```
-cp bin/app.elf tests/elfs/zilliqa_[device].elf
-```
-
-wehere `[device]` is `nanos`, `nanosp` or `nanox`.
-
-## Development Environment
-
-We also provide a separate develop environment that comes with `qemu`
-preinstalled. To build this, run
+To build test environment, run:
 
 ```sh
 docker build .  --tag builder_image
 ```
 
-To start developing, run:
+Then run the tests:
 
 ```sh
-docker run -it -v $PWD:/ledger-app/app --user "$(id -u)":"$(id -g)" --privileged -v /dev/bus/usb:/dev/bus/usb builder_image:latest bash
+docker run -it -v $PWD:/app builder_image:latest ./tools/test-all.sh
 ```
 
-## Inside Dev Environment
+## Build and load image
 
-To build app:
+To build, start the Docker image with:
 
 ```sh
-make clean && make
+docker run -it -v $PWD:/app --user "$(id -u)":"$(id -g)" ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder-lite:latest
+```
+
+and run
+
+```sh
+make BOLOS_SDK=[SDK]
+```
+
+where `[SDK]` is `${NANOS_SDK}`, `${NANOSP_SDK}` or `${NANOX_SDK}`. Then exit
+the docker image. Next load the
+
+```sh
+docker run -it -v $PWD:/app --user "$(id -u)":"$(id -g)" --privileged builder_image:latest
 ```
 
 To load the app:
@@ -55,20 +49,14 @@ To load the app:
 make load
 ```
 
-Note that in order to load, you may need to run the Docker image as privileged:
-
-```sh
-docker run -it -v $PWD:/app --privileged -v /dev/bus/usb:/dev/bus/usb  ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder-lite:latest
-```
-
 To uninstall:
 
 ```sh
 make delete
 ```
 
-Static analysis:
+To run tests:
 
 ```sh
- make clean && scan-build --use-cc=clang -analyze-headers -enable-checker security -enable-checker unix -enable-checker valist -o scan-build --status-bugs make default
+PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python pytest tests/functional/ -v --device [device]
 ```
