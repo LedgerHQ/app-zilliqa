@@ -2,8 +2,8 @@ from apps.zilliqa import ZilliqaClient
 
 # Taken from the Makefile, to update every time the Makefile version is bumped
 MAJOR = 0
-MINOR = 4
-PATCH = 4
+MINOR = 5
+PATCH = 0
 
 
 # In this test we check the behavior of the device when asked to provide the app version
