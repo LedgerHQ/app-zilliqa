@@ -83,15 +83,32 @@ static void do_approve(void)
     // but our flow makes it a bit difficult. So this is a hack.
     int tx = PUBLIC_KEY_BYTES_LEN + BECH32_ADDRSTR_LEN;
     io_exchange_with_code(SW_OK, tx);
+#ifdef HAVE_BAGL
     ui_idle();
+#else
+    if (ctx->genAddr) {
+        nbgl_useCaseStatus("ADDRESS\nVERIFIED", true, ui_idle);
+    } else {
+        nbgl_useCaseStatus("PUBLIC KEY\nVERIFIED", true, ui_idle);
+    }
+#endif
 }
 
 static void do_reject(void)
 {
     io_exchange_with_code(SW_USER_REJECTED, 0);
+#ifdef HAVE_BAGL
     ui_idle();
+#else
+    if (ctx->genAddr) {
+        nbgl_useCaseStatus("Address verification\ncancelled", false, ui_idle);
+    } else {
+        nbgl_useCaseStatus("Public Key verification\ncancelled", false, ui_idle);
+    }
+#endif
 }
 
+#ifdef HAVE_BAGL
 UX_STEP_NOCB(
     ux_display_public_flow_1_step,
     pnn,
@@ -130,6 +147,53 @@ UX_FLOW(ux_display_public_flow,
   &ux_display_public_flow_3_step,
   &ux_display_public_flow_4_step);
 
+void ui_display_public_key_flow(void) {
+    // Prepare the approval screen, filling in the header and body text.
+    if (ctx->genAddr) {
+        strlcpy(ctx->typeStr, "Generate Address", sizeof(ctx->typeStr));
+    } else {
+        strlcpy(ctx->typeStr, "Generate Public", sizeof(ctx->typeStr));
+    }
+    snprintf(ctx->keyStr, sizeof(ctx->keyStr), "Key #%d?", ctx->keyIndex);
+
+    ux_flow_init(0, ux_display_public_flow, NULL);
+}
+
+#else // HAVE_BAGL
+
+static void address_verification_cancelled(void) {
+    do_reject();
+}
+
+static void display_address_callback(bool confirm) {
+    if (confirm) {
+        do_approve();
+    } else {
+        address_verification_cancelled();
+    }
+}
+
+// called when tapping on review start page to actually display address
+static void display_addr(void) {
+    nbgl_useCaseAddressConfirmation(ctx->fullStr,
+                                    &display_address_callback);
+}
+
+void ui_display_public_key_flow(void) {
+    if (ctx->genAddr) {
+        strlcpy(ctx->typeStr, "Verify Zilliqa\n Address", sizeof(ctx->typeStr));
+    } else {
+        strlcpy(ctx->typeStr, "Verify Zilliqa\n Public Key", sizeof(ctx->typeStr));
+    }
+    snprintf(ctx->keyStr, sizeof(ctx->keyStr), "Using key index %d", ctx->keyIndex);
+
+
+    nbgl_useCaseReviewStart(&C_zilliqa_stax_64px,
+                            ctx->typeStr, ctx->keyStr, "Cancel",
+                            display_addr, address_verification_cancelled);
+}
+#endif // HAVE_BAGL
+
 // These are APDU parameters that control the behavior of the getPublicKey
 // command.
 #define P2_DISPLAY_PUBKEY  0x00
@@ -167,29 +231,18 @@ void handleGetPublicKey(uint8_t p1,
     // Read the key index from dataBuffer and set the genAddr flag according
     // to p2.
     ctx->keyIndex = U4LE(dataBuffer, 0);
+    ctx->genAddr = (p2 == P2_DISPLAY_ADDRESS);
 
     if (p2 == P2_DISPLAY_NONE)
     {
-        // In case we do we are requested to not display anything,         
+        // In case we do we are requested to not display anything,
         unsigned int len = prepareZilPubKeyAddr();
         io_exchange_with_code(SW_OK, len);
     }
     else
     {
-        // Otherwise, we display the address or public key as requested
-        ctx->genAddr = (p2 == P2_DISPLAY_ADDRESS);
-
-        // Prepare the approval screen, filling in the header and body text.
-        if (ctx->genAddr) {
-            memmove(ctx->typeStr, "Generate Address", 17);
-        }
-        else {
-            memmove(ctx->typeStr, "Generate Public", 16);
-        }
-        snprintf(ctx->keyStr, sizeof(ctx->keyStr), "Key #%d?", ctx->keyIndex);
-
         prepareZilPubKeyAddr();
-        ux_flow_init(0, ux_display_public_flow, NULL);
+        ui_display_public_key_flow();
 
         *flags |= IO_ASYNCH_REPLY;
     }

@@ -115,6 +115,12 @@ commandContext global;
 ux_state_t G_ux;
 bolos_ux_params_t G_ux_params;
 
+static void app_quit(void) {
+    // exit app here
+    os_sched_exit(-1);
+}
+
+#ifdef HAVE_BAGL
 UX_STEP_NOCB(
     ux_idle_flow_1_step,
     bn,
@@ -132,7 +138,7 @@ UX_STEP_NOCB(
 UX_STEP_VALID(
     ux_idle_flow_3_step,
     pb,
-    os_sched_exit(-1),
+    app_quit(),
     {
       &C_icon_dashboard,
       "Quit",
@@ -152,6 +158,32 @@ void ui_idle(void) {
     }
     ux_flow_init(0, ux_idle_flow, NULL);
 }
+
+#else // HAVE_BAGL
+
+// 'About' menu
+static const char* const INFO_TYPES[] = {"Version"};
+static const char* const INFO_CONTENTS[] = {APPVERSION};
+
+static bool nav_callback(uint8_t page, nbgl_pageContent_t* content) {
+    UNUSED(page);
+    content->type = INFOS_LIST;
+    content->infosList.nbInfos = 1;
+    content->infosList.infoTypes = (const char**) INFO_TYPES;
+    content->infosList.infoContents = (const char**) INFO_CONTENTS;
+    return true;
+}
+
+static void ui_menu_about(void) {
+    nbgl_useCaseSettings(APPNAME, 0, 1, false, ui_idle, nav_callback, NULL);
+}
+
+void ui_idle(void) {
+    nbgl_useCaseHome(APPNAME, &C_zilliqa_stax_64px,
+                     NULL, false, ui_menu_about, app_quit);
+}
+
+#endif // HAVE_BAGL
 
 // io_exchange_with_code is a helper function for sending response APDUs from
 // button handlers. Note that the IO_RETURN_AFTER_TX flag is set. 'tx' is the
@@ -296,10 +328,12 @@ static void zil_main(void) {
 // Next, we'll look at how the various commands are implemented. We'll start
 // with the simplest command, signHash.c.
 
+#ifdef HAVE_BAGL
 // override point, but nothing more to do
 void io_seproxyhal_display(const bagl_element_t *element) {
 	io_seproxyhal_display_default(element);
 }
+#endif  // HAVE_BAGL
 
 unsigned char G_io_seproxyhal_spi_buffer[IO_SEPROXYHAL_BUFFER_SIZE_B];
 
@@ -307,31 +341,34 @@ unsigned char io_event(unsigned char channel) {
 	UNUSED(channel);
 	// can't have more than one tag in the reply, not supported yet.
 	switch (G_io_seproxyhal_spi_buffer[0]) {
-	case SEPROXYHAL_TAG_FINGER_EVENT:
-		UX_FINGER_EVENT(G_io_seproxyhal_spi_buffer);
-		break;
-
 	case SEPROXYHAL_TAG_BUTTON_PUSH_EVENT:
+#ifdef HAVE_BAGL
 		UX_BUTTON_PUSH_EVENT(G_io_seproxyhal_spi_buffer);
+#endif  // HAVE_BAGL
 		break;
-
 	case SEPROXYHAL_TAG_STATUS_EVENT:
 		if (G_io_apdu_media == IO_APDU_MEDIA_USB_HID &&
 			!(U4BE(G_io_seproxyhal_spi_buffer, 3) &
 			  SEPROXYHAL_TAG_STATUS_EVENT_FLAG_USB_POWERED)) {
 			THROW(EXCEPTION_IO_RESET);
 		}
-		UX_DEFAULT_EVENT();
-		break;
-
+		/* fallthrough */
 	case SEPROXYHAL_TAG_DISPLAY_PROCESSED_EVENT:
+#ifdef HAVE_BAGL
 		UX_DISPLAYED_EVENT({});
+#endif  // HAVE_BAGL
+#ifdef HAVE_NBGL
+		UX_DEFAULT_EVENT();
+#endif  // HAVE_NBGL
 		break;
-
+#ifdef HAVE_NBGL
+	case SEPROXYHAL_TAG_FINGER_EVENT:
+		UX_FINGER_EVENT(G_io_seproxyhal_spi_buffer);
+		break;
+#endif  // HAVE_NBGL
 	case SEPROXYHAL_TAG_TICKER_EVENT:
 		UX_TICKER_EVENT(G_io_seproxyhal_spi_buffer, {});
 		break;
-
 	default:
 		UX_DEFAULT_EVENT();
 		break;
@@ -397,7 +434,7 @@ __attribute__((section(".boot"))) int main(void) {
 				ui_idle();
 #ifdef HAVE_BLE
 				BLE_power(0, NULL);
-				BLE_power(1, "Nano X");
+				BLE_power(1, NULL);
 #endif // HAVE_BLE
 				zil_main();
 			}
