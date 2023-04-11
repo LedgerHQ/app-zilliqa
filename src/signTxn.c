@@ -50,14 +50,14 @@ UX_FLOW_DEF_NOCB(
     ux_signmsg_flow_2_step,
     bnnn_paging,
     {
-      .title = "Amount (ZIL)",
+      .title = "Amount",
       .text = ctx->amountStr,
     });
 UX_FLOW_DEF_NOCB(
     ux_signmsg_flow_3_step,
     bnnn_paging,
     {
-      .title = "Gasprice (ZIL)",
+      .title = "Gasprice",
       .text = ctx->gaspriceStr,
     });
 UX_FLOW_DEF_NOCB(
@@ -168,9 +168,9 @@ static void review_choice(bool confirm) {
 
 static void single_action_review_continue(void) {
 	// Setup data to display
-	pairs[0].item = "Amount (ZIL)";
+	pairs[0].item = "Amount";
 	pairs[0].value = ctx->amountStr;
-	pairs[1].item = "Gasprice (ZIL)";
+	pairs[1].item = "Gasprice";
 	pairs[1].value = ctx->gaspriceStr;
 	pairs[2].item = "To";
 	pairs[2].value = ctx->toAddrStr;
@@ -410,9 +410,11 @@ static bool decode_amount_gasprice_callback (pb_istream_t *stream, const pb_fiel
 			CHECK_CANARY;
 			if ((int) *arg == ProtoTransactionCoreInfo_amount_tag) {
 				qa_to_zil(buf2, ctx->amountStr, sizeof(ctx->amountStr));
+				strlcat(ctx->amountStr, " ZIL", sizeof(ctx->amountStr));
 				PRINTF("Amount Qa converted to Zil: %s\n", ctx->amountStr);
 			} else {
 				qa_to_zil(buf2, ctx->gaspriceStr, sizeof(ctx->gaspriceStr));
+				strlcat(ctx->gaspriceStr, " ZIL", sizeof(ctx->gaspriceStr));
 				PRINTF("Gasprice Qa converted to Zil: %s\n", ctx->gaspriceStr);
 			}
 			CHECK_CANARY;
