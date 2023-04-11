@@ -50,22 +50,22 @@ UX_FLOW_DEF_NOCB(
     ux_signmsg_flow_2_step,
     bnnn_paging,
     {
-      .title = "To",
-      .text = ctx->toAddrStr,
+      .title = "Amount (ZIL)",
+      .text = ctx->amountStr,
     });
 UX_FLOW_DEF_NOCB(
     ux_signmsg_flow_3_step,
     bnnn_paging,
     {
-      .title = "Amount (ZIL)",
-      .text = ctx->amountStr,
+      .title = "Gasprice (ZIL)",
+      .text = ctx->gaspriceStr,
     });
 UX_FLOW_DEF_NOCB(
     ux_signmsg_flow_4_step,
     bnnn_paging,
     {
-      .title = "Gasprice (ZIL)",
-      .text = ctx->gaspriceStr,
+      .title = "To",
+      .text = ctx->toAddrStr,
     });
 UX_FLOW_DEF_NOCB(
     ux_signmsg_flow_5_step,
@@ -168,12 +168,12 @@ static void review_choice(bool confirm) {
 
 static void single_action_review_continue(void) {
 	// Setup data to display
-	pairs[0].item = "To";
-	pairs[0].value = ctx->toAddrStr;
-	pairs[1].item = "Amount (ZIL)";
-	pairs[1].value = ctx->amountStr;
-	pairs[2].item = "Gasprice (ZIL)";
-	pairs[2].value = ctx->gaspriceStr;
+	pairs[0].item = "Amount (ZIL)";
+	pairs[0].value = ctx->amountStr;
+	pairs[1].item = "Gasprice (ZIL)";
+	pairs[1].value = ctx->gaspriceStr;
+	pairs[2].item = "To";
+	pairs[2].value = ctx->toAddrStr;
 
 	if (ctx->codeStr[0] == '\0') {
 		if (ctx->dataStr[0] == '\0') {
