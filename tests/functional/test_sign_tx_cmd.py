@@ -132,7 +132,7 @@ def test_sign_tx_data_accepted(test_name, firmware, backend, navigator):
     elif firmware.device.startswith("nano"):
         instructions = get_nano_review_instructions(5)
     else:
-        instructions = get_fat_review_instructions(2)
+        instructions = get_fat_review_instructions(3)
     check_transaction(test_name, backend, navigator, transaction, instructions)
 
 
