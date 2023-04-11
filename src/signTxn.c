@@ -408,7 +408,7 @@ static bool decode_amount_gasprice_callback (pb_istream_t *stream, const pb_fiel
 		if (tostring128((uint128_t*)buf, 10, buf2, sizeof(buf2))) {
 			PRINTF("128b to decimal converted value: %s\n", buf2);
 			CHECK_CANARY;
-			if ((int) *arg != ProtoTransactionCoreInfo_amount_tag) {
+			if ((int) *arg == ProtoTransactionCoreInfo_amount_tag) {
 				qa_to_zil(buf2, ctx->amountStr, sizeof(ctx->amountStr));
 				PRINTF("Amount Qa converted to Zil: %s\n", ctx->amountStr);
 			} else {
