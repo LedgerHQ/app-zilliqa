@@ -11,6 +11,11 @@ from utils import ROOT_SCREENSHOT_PATH, get_nano_review_instructions
 from utils import get_fat_review_instructions
 
 ZILLIQA_KEY_INDEX = 1
+QA_ZIL_SHIFT = 12
+
+
+def zil_to_qa(zil):
+    return int(zil * 10 ** QA_ZIL_SHIFT)
 
 
 def check_signature(client, backend, message, response):
@@ -40,8 +45,8 @@ def check_transaction(test_name, backend, navigator, transaction, instructions):
 def test_sign_tx_simple_accepted(test_name, firmware, backend, navigator):
     senderpubkey = ByteArray(data=bytes.fromhex("0205273e54f262f8717a687250591dcfb5755b8ce4e3bd340c7abefd0de1276574"))
     toaddr = bytes.fromhex("8AD0357EBB5515F694DE597EDA6F3F6BDBAD0FD9")
-    amount = ByteArray(data=(100).to_bytes(16, byteorder='big'))
-    gasprice = ByteArray(data=(1000000000).to_bytes(16, byteorder='big'))
+    amount = ByteArray(data=(zil_to_qa(1.1)).to_bytes(16, byteorder='big'))
+    gasprice = ByteArray(data=(zil_to_qa(0.002)).to_bytes(16, byteorder='big'))
     transaction = ProtoTransactionCoreInfo(
         version=65537,
         nonce=13,
@@ -66,8 +71,8 @@ def test_sign_tx_simple_accepted(test_name, firmware, backend, navigator):
 def test_sign_tx_simple_refused(test_name, firmware, backend, navigator):
     senderpubkey = ByteArray(data=bytes.fromhex("0205273e54f262f8717a687250591dcfb5755b8ce4e3bd340c7abefd0de1276574"))
     toaddr = bytes.fromhex("8AD0357EBB5515F694DE597EDA6F3F6BDBAD0FD9")
-    amount = ByteArray(data=(100).to_bytes(16, byteorder='big'))
-    gasprice = ByteArray(data=(1000000000).to_bytes(16, byteorder='big'))
+    amount = ByteArray(data=(zil_to_qa(1.1)).to_bytes(16, byteorder='big'))
+    gasprice = ByteArray(data=(zil_to_qa(0.002)).to_bytes(16, byteorder='big'))
     transaction = ProtoTransactionCoreInfo(
         version=65537,
         nonce=13,
@@ -112,8 +117,8 @@ def test_sign_tx_simple_refused(test_name, firmware, backend, navigator):
 def test_sign_tx_data_accepted(test_name, firmware, backend, navigator):
     senderpubkey = ByteArray(data=bytes.fromhex("0205273e54f262f8717a687250591dcfb5755b8ce4e3bd340c7abefd0de1276574"))
     toaddr = bytes.fromhex("8AD0357EBB5515F694DE597EDA6F3F6BDBAD0FD9")
-    amount = ByteArray(data=(100).to_bytes(16, byteorder='big'))
-    gasprice = ByteArray(data=(1000000000).to_bytes(16, byteorder='big'))
+    amount = ByteArray(data=(zil_to_qa(1.1)).to_bytes(16, byteorder='big'))
+    gasprice = ByteArray(data=(zil_to_qa(0.002)).to_bytes(16, byteorder='big'))
     transaction = ProtoTransactionCoreInfo(
         version=65537,
         nonce=13,
@@ -132,7 +137,7 @@ def test_sign_tx_data_accepted(test_name, firmware, backend, navigator):
     elif firmware.device.startswith("nano"):
         instructions = get_nano_review_instructions(5)
     else:
-        instructions = get_fat_review_instructions(2)
+        instructions = get_fat_review_instructions(3)
     check_transaction(test_name, backend, navigator, transaction, instructions)
 
 
@@ -140,8 +145,8 @@ def test_sign_tx_code_accepted(test_name, firmware, backend, navigator):
 
     senderpubkey = ByteArray(data=bytes.fromhex("0205273e54f262f8717a687250591dcfb5755b8ce4e3bd340c7abefd0de1276574"))
     toaddr = bytes.fromhex("8AD0357EBB5515F694DE597EDA6F3F6BDBAD0FD9")
-    amount = ByteArray(data=(100).to_bytes(16, byteorder='big'))
-    gasprice = ByteArray(data=(1000000000).to_bytes(16, byteorder='big'))
+    amount = ByteArray(data=(zil_to_qa(1.1)).to_bytes(16, byteorder='big'))
+    gasprice = ByteArray(data=(zil_to_qa(0.002)).to_bytes(16, byteorder='big'))
     transaction = ProtoTransactionCoreInfo(
         version=65537,
         nonce=13,

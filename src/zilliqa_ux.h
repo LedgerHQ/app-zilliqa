@@ -50,8 +50,8 @@ typedef struct {
 	StreamData sd;
 
 	char toAddrStr[BECH32_ADDRSTR_LEN + 1];
-	char amountStr[ZIL_UINT128_BUF_LEN];
-	char gaspriceStr[ZIL_UINT128_BUF_LEN];
+	char amountStr[ZIL_UINT128_BUF_LEN + sizeof(" ZIL") - 1];
+	char gaspriceStr[ZIL_UINT128_BUF_LEN + sizeof(" ZIL") - 1];
 	char codeStr[TXN_DISP_CODE_MAX_LEN];
 	char dataStr[TXN_DISP_DATA_MAX_LEN];
 	ProtoTransactionCoreInfo txn;
