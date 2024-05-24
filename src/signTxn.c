@@ -4,6 +4,7 @@
 #include "os.h"
 #include "os_io_seproxyhal.h"
 #include "zilliqa.h"
+#include "qatozil.h"
 #include "zilliqa_ux.h"
 #include "pb_decode.h"
 #include "txn.pb.h"
@@ -12,251 +13,205 @@
 
 static signTxnContext_t * const ctx = &global.signTxnContext;
 
-// Print the key index into the indexStr buffer. 
-static void prepareIndexStr(void)
-{
-		os_memmove(ctx->indexStr, "with Key #", 10);
-		int n = bin64b2dec(ctx->indexStr+10, sizeof(ctx->indexStr)-10, ctx->keyIndex);
-		// We copy two bytes so as to include the terminating '\0' byte for the string.
-		os_memmove(ctx->indexStr+10+n, "?", 2);
-}
-
-#ifdef HAVE_UX_FLOW
-
-static void do_approve(const bagl_element_t *e)
+static void do_approve(void)
 {
 		assert(IO_APDU_BUFFER_SIZE >= SCHNORR_SIG_LEN_RS);
-		os_memcpy(G_io_apdu_buffer, ctx->signature, SCHNORR_SIG_LEN_RS);
+		memcpy(G_io_apdu_buffer, ctx->signature, SCHNORR_SIG_LEN_RS);
 		// Send the data in the APDU buffer, which is a 64 byte signature.
 		io_exchange_with_code(SW_OK, SCHNORR_SIG_LEN_RS);
+#ifdef HAVE_BAGL
 		// Return to the main screen.
 		ui_idle();
+#else
+		nbgl_useCaseStatus("TRANSACTION\nSIGNED", true, ui_idle);
+#endif
 }
 
-static void do_reject(const bagl_element_t *e)
+static void do_reject(void)
 {
     io_exchange_with_code(SW_USER_REJECTED, 0);
+#ifdef HAVE_BAGL
     ui_idle();
+#else
+    nbgl_useCaseStatus("Transaction rejected", false, ui_idle);
+#endif
 }
 
+#ifdef HAVE_BAGL
 UX_FLOW_DEF_NOCB(
     ux_signmsg_flow_1_step,
     pnn,
     {
       &C_icon_certificate,
       "Sign Txn",
-			(char *) ctx->indexStr,
+      ctx->indexStr,
     });
 UX_FLOW_DEF_NOCB(
     ux_signmsg_flow_2_step,
     bnnn_paging,
     {
-      .title = "Txn",
-      .text = (char *) ctx->msg,
+      .title = "Amount",
+      .text = ctx->amountStr,
+    });
+UX_FLOW_DEF_NOCB(
+    ux_signmsg_flow_3_step,
+    bnnn_paging,
+    {
+      .title = "Gasprice",
+      .text = ctx->gaspriceStr,
+    });
+UX_FLOW_DEF_NOCB(
+    ux_signmsg_flow_4_step,
+    bnnn_paging,
+    {
+      .title = "To",
+      .text = ctx->toAddrStr,
+    });
+UX_FLOW_DEF_NOCB(
+    ux_signmsg_flow_5_step,
+    bnnn_paging,
+    {
+      .title = "Contract code",
+      .text = ctx->codeStr,
+    });
+UX_FLOW_DEF_NOCB(
+    ux_signmsg_flow_6_step,
+    bnnn_paging,
+    {
+      .title = "Contract data",
+      .text = ctx->dataStr,
     });
 UX_FLOW_DEF_VALID(
-    ux_signmsg_flow_3_step,
+    ux_signmsg_flow_7_step,
     pn,
-    do_approve(NULL),
+    do_approve(),
     {
       &C_icon_validate_14,
       "Sign",
     });
 UX_FLOW_DEF_VALID(
-    ux_signmsg_flow_4_step,
+    ux_signmsg_flow_8_step,
     pn,
-    do_reject(NULL),
+    do_reject(),
     {
       &C_icon_crossmark,
       "Cancel",
     });
 
-const ux_flow_step_t *        const ux_signmsg_flow [] = {
+/* Simple flow without Smart Contract code nor data */
+UX_FLOW(ux_signmsg_simple_flow,
   &ux_signmsg_flow_1_step,
   &ux_signmsg_flow_2_step,
   &ux_signmsg_flow_3_step,
   &ux_signmsg_flow_4_step,
-  FLOW_END_STEP,
-};
+  &ux_signmsg_flow_7_step,
+  &ux_signmsg_flow_8_step);
 
-#else
+/* Flow without Smart Contract code but with data */
+UX_FLOW(ux_signmsg_data_flow,
+  &ux_signmsg_flow_1_step,
+  &ux_signmsg_flow_2_step,
+  &ux_signmsg_flow_3_step,
+  &ux_signmsg_flow_4_step,
+  &ux_signmsg_flow_6_step,
+  &ux_signmsg_flow_7_step,
+  &ux_signmsg_flow_8_step);
 
-// Define the approval screen. This is where the user will confirm that they
-// want to sign the hash. This UI layout is very common: a background, two
-// buttons, and two lines of text.
-//
-// Screens are arrays of elements; the order of elements determines the order
-// in which they are rendered. Elements cannot be modified at runtime.
-static const bagl_element_t ui_signHash_approve[] = {
-	// The background; literally a black rectangle. This element must be
-	// defined first, so that the other elements render on top of it. Also, if
-	// your screen doesn't include a background, it will render directly on
-	// top of the previous screen.
-	UI_BACKGROUND(),
+/* Flow with Smart Contract code and data */
+UX_FLOW(ux_signmsg_code_data_flow,
+  &ux_signmsg_flow_1_step,
+  &ux_signmsg_flow_2_step,
+  &ux_signmsg_flow_3_step,
+  &ux_signmsg_flow_4_step,
+  &ux_signmsg_flow_5_step,
+  &ux_signmsg_flow_6_step,
+  &ux_signmsg_flow_7_step,
+  &ux_signmsg_flow_8_step);
 
-	// Rejection/approval icons, represented by a cross and a check mark,
-	// respectively. The cross will be displayed on the far left of the
-	// screen, and the check on the far right, so as to indicate which button
-	// corresponds to each action.
-	UI_ICON_LEFT(0x00, BAGL_GLYPH_ICON_CROSS),
-	UI_ICON_RIGHT(0x00, BAGL_GLYPH_ICON_CHECK),
+void ui_display_sign_txn_flow(void) {
+	// Generate a string for the index.
+	snprintf(ctx->indexStr, sizeof(ctx->indexStr), "with Key #%d?", ctx->keyIndex);
 
-	// The two lines of text, which together form a complete sentence:
-	//
-	//    Sign this Txn
-	//    with Key #123?
-	//
-	// Similar gotchas with signHash.c
-	UI_TEXT(0x00, 0, 12, 128, "Sign this Txn"),
-	UI_TEXT(0x00, 0, 26, 128, global.signTxnContext.indexStr)
-};
-
-static unsigned int ui_signHash_approve_button(unsigned int button_mask, unsigned int button_mask_counter) {
-
-	switch (button_mask) {
-	case BUTTON_EVT_RELEASED | BUTTON_LEFT: // REJECT
-		// Send an error code to the computer. The application on the computer
-		// should recognize this code and display a "user refused to sign"
-		// message instead of a generic error.
-		io_exchange_with_code(SW_USER_REJECTED, 0);
-		// Return to the main screen.
-		ui_idle();
-		break;
-
-	case BUTTON_EVT_RELEASED | BUTTON_RIGHT: // APPROVE
-		// store the signature in the APDU buffer.
-		os_memcpy(G_io_apdu_buffer, ctx->signature, SCHNORR_SIG_LEN_RS);
-		// Send the data in the APDU buffer, along with a special code that
-		// indicates approval. 64 is the number of bytes in the response APDU,
-		// sans response code.
-		io_exchange_with_code(SW_OK, SCHNORR_SIG_LEN_RS);
-		// Return to the main screen.
-		ui_idle();
-		break;
-	}
-	return 0;
-}
-
-// Define the comparison screen. This is where the user will compare the hash
-// on their device to the one shown on the computer. This UI is identical to
-// the approval screen, but with left/right buttons instead of reject/approve.
-static const bagl_element_t ui_signHash_compare[] = {
-	UI_BACKGROUND(),
-
-	// Left and right buttons for scrolling the text. The 0x01 and 0x02 are
-	// called userids; they allow the preprocessor (below) to know which
-	// element it's examining.
-	UI_ICON_LEFT(0x01, BAGL_GLYPH_ICON_LEFT),
-	UI_ICON_RIGHT(0x02, BAGL_GLYPH_ICON_RIGHT),
-
-	// Two lines of text: a header and the contents of the hash. We will be
-	// implementing a fancy scrollable text field, so the second line only
-	// needs to hold the currently-visible portion of the hash.
-	//
-	// Note that the userid of these fields is 0: this is a convention that
-	// most apps use to indicate that the element should always be displayed.
-	// UI_BACKGROUND() also has userid == 0. And if you revisit the approval
-	// screen, you'll see that all of those elements have userid == 0 as well.
-	UI_TEXT(0x00, 0, 12, 128, "Compare txn:"),
-	UI_TEXT(0x00, 0, 26, 128, global.signTxnContext.partialMsg),
-};
-
-// This is a "preprocessor" function that controls which elements of the
-// screen are displayed. This function is passed to UX_DISPLAY, which calls it
-// on each element of the screen. It should return NULL for elements that
-// should not be displayed, and otherwise return the element itself. Elements
-// can be identified by their userid.
-//
-// For the comparison screen, we use the preprocessor to make the scroll
-// buttons more intuitive: we only display them if there is more text hidden
-// off-screen.
-//
-// Note that we did not define a preprocessor for the approval screen. This is
-// because we always want to display every element of that screen. The
-// preprocessor acts a filter that selectively hides elements; since we did
-// not want to hide any elements, no preprocessor was necessary.
-static const bagl_element_t* ui_prepro_signHash_compare(const bagl_element_t *element) {
-	switch (element->component.userid) {
-	case 1:
-		// 0x01 is the left icon (see screen definition above), so return NULL
-		// if we're displaying the beginning of the text.
-		return (ctx->displayIndex == 0) ? NULL : element;
-	case 2:
-		// 0x02 is the right, so return NULL if we're displaying the end of the text.
-		return (ctx->displayIndex == ctx->msgLen - 12) ? NULL : element;
-	default:
-		// Always display all other elements.
-		return element;
-	}
-}
-
-// This is the button handler for the comparison screen. Unlike the approval
-// button handler, this handler doesn't send any data to the computer.
-static unsigned int ui_signHash_compare_button(unsigned int button_mask, unsigned int button_mask_counter) {
-	switch (button_mask) {
-	// The available button mask values are LEFT, RIGHT, EVT_RELEASED, and
-	// EVT_FAST. EVT_FAST is set when a button is held for 8 "ticks," i.e.
-	// 800ms.
-	//
-	// The comparison screens in the Zilliqa app allow the user to scroll using
-	// the left and right buttons. The user should be able to hold a button
-	// and scroll at a constant rate. When the user first presses the left
-	// button, we'll hit the LEFT case; after they've held the button for 8
-	// ticks, we'll hit the EVT_FAST | LEFT case. Since we want to scroll at a
-	// constant rate regardless, we handle both cases identically.
-	//
-	// Also note that, unlike the approval screen, we don't check for
-	// EVT_RELEASED. In fact, when a single button is released, none of the
-	// switch cases will be hit, so we'll stop scrolling.
-	case BUTTON_LEFT:
-	case BUTTON_EVT_FAST | BUTTON_LEFT: // SEEK LEFT
-		// Decrement the displayIndex when the left button is pressed (or held).
-		if (ctx->displayIndex > 0) {
-			ctx->displayIndex--;
+	if (ctx->codeStr[0] == '\0') {
+		if (ctx->dataStr[0] == '\0') {
+			ux_flow_init(0, ux_signmsg_simple_flow, NULL);
+		} else {
+			ux_flow_init(0, ux_signmsg_data_flow, NULL);
 		}
-		// Use the displayIndex to recalculate the displayed portion of the
-		// text. os_memmove is the Ledger SDK's version of memmove (there is
-		// no os_memcpy). In practice, I don't think it matters whether you
-		// use os_memmove or the standard memmove from <string.h>.
-		os_memmove(ctx->partialMsg, ctx->msg + ctx->displayIndex, 12);
-		// Re-render the screen.
-		UX_REDISPLAY();
-		break;
+	} else {
+		ux_flow_init(0, ux_signmsg_code_data_flow, NULL);
+	}
+}
 
-	case BUTTON_RIGHT:
-	case BUTTON_EVT_FAST | BUTTON_RIGHT: // SEEK RIGHT
-		if (ctx->displayIndex < ctx->msgLen-12) {
-			ctx->displayIndex++;
+#else // HAVE_BAGL
+
+static nbgl_layoutTagValue_t pairs[5];
+static nbgl_layoutTagValueList_t pairList = {0};
+static nbgl_pageInfoLongPress_t infoLongPress;
+
+static void transaction_rejected(void) {
+	do_reject();
+}
+
+static void reject_confirmation(void) {
+	nbgl_useCaseConfirm("Reject transaction?", NULL, "Yes, Reject", "Go back to transaction", transaction_rejected);
+}
+
+// called when long press button on 3rd page is long-touched or when reject footer is touched
+static void review_choice(bool confirm) {
+	if (confirm) {
+		do_approve();
+	} else {
+		reject_confirmation();
+	}
+}
+
+static void single_action_review_continue(void) {
+	// Setup data to display
+	pairs[0].item = "Amount";
+	pairs[0].value = ctx->amountStr;
+	pairs[1].item = "Gasprice";
+	pairs[1].value = ctx->gaspriceStr;
+	pairs[2].item = "To";
+	pairs[2].value = ctx->toAddrStr;
+
+	if (ctx->codeStr[0] == '\0') {
+		if (ctx->dataStr[0] == '\0') {
+			pairList.nbPairs = 3;
+		} else {
+			pairs[3].item = "Contract data";
+			pairs[3].value = ctx->dataStr;
+			pairList.nbPairs = 4;
 		}
-		os_memmove(ctx->partialMsg, ctx->msg + ctx->displayIndex, 12);
-		UX_REDISPLAY();
-		break;
-
-	case BUTTON_EVT_RELEASED | BUTTON_LEFT | BUTTON_RIGHT: // PROCEED
-		// Note that because the approval screen does not have a preprocessor,
-		// we must pass NULL.
-		UX_DISPLAY(ui_signHash_approve, NULL);
-		break;
+	} else {
+		pairs[3].item = "Contract code";
+		pairs[3].value = ctx->codeStr;
+		pairs[4].item = "Contract data";
+		pairs[4].value = ctx->dataStr;
+		pairList.nbPairs = 5;
 	}
-	// (The return value of a button handler is irrelevant; it is never
-	// checked.)
-	return 0;
+
+	pairList.nbMaxLinesForValue = 0;
+	pairList.pairs = pairs;
+	infoLongPress.icon = &C_zilliqa_stax_64px;
+	infoLongPress.text = "Sign transaction";
+	infoLongPress.longPressText = "Hold to sign";
+
+	nbgl_useCaseStaticReview(&pairList, &infoLongPress, "Reject transaction", review_choice);
 }
 
-#endif // HAVE_UX_FLOW
-
-// Append msg to ctx->msg for display. THROW if out of memory.
-static void inline append_ctx_msg (signTxnContext_t *ctx, const char* msg, int msg_len)
-{
-	if (ctx->msgLen + msg_len >= TXN_DISP_MSG_MAX_LEN) {
-		FAIL("Display memory full");
-	}
-	
-	os_memcpy(ctx->msg + ctx->msgLen, msg, msg_len);
-	ctx->msgLen += msg_len;
+void ui_display_sign_txn_flow(void) {
+	snprintf(ctx->indexStr, sizeof(ctx->indexStr), "Using key index %d", ctx->keyIndex);
+	nbgl_useCaseReviewStart(&C_zilliqa_stax_64px,
+							"Review transaction",
+							ctx->indexStr,
+							"Reject transaction",
+							single_action_review_continue,
+							reject_confirmation);
 }
+#endif // HAVE_BAGL
 
-bool istream_callback (pb_istream_t *stream, pb_byte_t *buf, size_t count)
+static bool istream_callback (pb_istream_t *stream, pb_byte_t *buf, size_t count)
 {
 	StreamData *sd = stream->state;
 	int bufNext = 0;
@@ -267,7 +222,7 @@ bool istream_callback (pb_istream_t *stream, pb_byte_t *buf, size_t count)
 	if (sdbufRem > 0) {
 		// We have some data to spare.
 		int copylen = MIN(sdbufRem, (int)count);
-		os_memcpy(buf, sd->buf + sd->nextIdx, copylen);
+		memcpy(buf, sd->buf + sd->nextIdx, copylen);
 		count -= copylen;
 		bufNext += copylen;
 		sd->nextIdx += copylen;
@@ -280,17 +235,34 @@ bool istream_callback (pb_istream_t *stream, pb_byte_t *buf, size_t count)
 		assert(sd->len == sd->nextIdx);
 		if (sd->hostBytesLeft) {
 			G_io_apdu_buffer[0] = 0x90;
-    	G_io_apdu_buffer[1] = 0x00;
+			G_io_apdu_buffer[1] = 0x00;
 			unsigned rx = io_exchange(CHANNEL_APDU, 2);
+			// Sanity-check the command length
+			if (rx < OFFSET_CDATA) {
+				FAIL("Bad command length");
+			}
+			// APDU length and LC field consistency
+			if (rx - OFFSET_CDATA != G_io_apdu_buffer[OFFSET_LC]) {
+				FAIL("Bad command length");
+			}
 			static const uint32_t hostBytesLeftOffset = OFFSET_CDATA + 0;
 			static const uint32_t txnLenOffset = OFFSET_CDATA + 4;
 			static const uint32_t dataOffset = OFFSET_CDATA + 8;
+
+			// Sanity-check the command length
+			if (rx < OFFSET_CDATA + sizeof(uint32_t) + sizeof(uint32_t)) {
+				FAIL("Bad command length");
+			}
+
 			// These two cannot be made static as the function is recursive.
 			uint32_t hostBytesLeft = U4LE(G_io_apdu_buffer, hostBytesLeftOffset);
 			uint32_t txnLen = U4LE(G_io_apdu_buffer, txnLenOffset);
 			PRINTF("istream_callback: io_exchanged %d bytes\n", rx);
 			PRINTF("istream_callback: hostBytesLeft: %d\n", hostBytesLeft);
 			PRINTF("istream_callback: txnLen: %d\n", txnLen);
+			if (rx != dataOffset + txnLen) {
+				FAIL("Bad command length");
+			}
 			if (txnLen > TXN_BUF_SIZE) {
 				FAIL("Cannot handle large data sent from host");
 			}
@@ -298,7 +270,7 @@ bool istream_callback (pb_istream_t *stream, pb_byte_t *buf, size_t count)
 
 			// Update and move data to our state.
 			sd->len = txnLen;
-			os_memcpy(sd->buf, G_io_apdu_buffer + dataOffset, txnLen);
+			memcpy(sd->buf, G_io_apdu_buffer + dataOffset, txnLen);
 			sd->hostBytesLeft = hostBytesLeft;
 			sd->nextIdx = 0;
 			CHECK_CANARY;
@@ -316,12 +288,14 @@ bool istream_callback (pb_istream_t *stream, pb_byte_t *buf, size_t count)
 	return true;
 }
 
-bool decode_txn_data (pb_istream_t *stream, const pb_field_t *field, void **arg)
+
+static bool decode_and_store_in_ctx(pb_istream_t *stream, char* buffer, uint32_t buffer_len)
 {
 	size_t jsonLen = stream->bytes_left;
-	PRINTF("decode_txn_data: data length=%d\n", jsonLen);
-	if (jsonLen + ctx->msgLen > TXN_DISP_MSG_MAX_LEN) {
-		PRINTF("decode_txn_data: Cannot decode txn, too large.\n");
+	PRINTF("decode_and_store_in_ctx: data length=%d\n", jsonLen);
+	if (jsonLen + 1 /* one byte for \0 */ > buffer_len) {
+		PRINTF("decode_txn_data: Cannot decode code, too large.\n");
+		strlcpy(buffer, "Error: Too large", buffer_len);
 		// We can't do anything but just consume the data.
 		if (!pb_read(stream, NULL, jsonLen)) {
 			FAIL("pb_read failed during txn data decode");
@@ -330,105 +304,60 @@ bool decode_txn_data (pb_istream_t *stream, const pb_field_t *field, void **arg)
 	}
 
 	PRINTF("decode_txn_data: Displaying raw JSON of length %d\n", jsonLen);
-	if (!pb_read(stream, (pb_byte_t*) ctx->msg + ctx->msgLen, jsonLen)) {
+	if (!pb_read(stream, (pb_byte_t*) buffer, jsonLen)) {
 		FAIL("pb_read failed during txn data decode");
 	}
-	ctx->msgLen += jsonLen;
+	// Ensure the string is '\0' terminated
+	buffer[jsonLen] = '\0';
 
 	return true;
 }
 
-static bool decode_callback (pb_istream_t *stream, const pb_field_t *field, void **arg)
+static bool decode_code_callback (pb_istream_t *stream, const pb_field_t *field, void **arg)
 {
-	static const int bufsize = 
-		MAX(ZIL_UINT128_BUF_LEN, MAX(PUB_ADDR_BYTES_LEN, ZIL_AMOUNT_GASPRICE_BYTES));
-	static const int buf2size = MAX(bufsize, BECH32_ENCODE_BUF_LEN);
-	char buf[bufsize], buf2[buf2size];
+	UNUSED(arg);
+	if (field->tag != ProtoTransactionCoreInfo_code_tag) {
+		FAIL("Unexpected data");
+	}
+	return decode_and_store_in_ctx(stream, ctx->codeStr, sizeof(ctx->codeStr));
+}
+
+static bool decode_data_callback (pb_istream_t *stream, const pb_field_t *field, void **arg)
+{
+	UNUSED(arg);
+	if (field->tag != ProtoTransactionCoreInfo_data_tag) {
+		FAIL("Unexpected data");
+	}
+	return decode_and_store_in_ctx(stream, ctx->dataStr, sizeof(ctx->dataStr));
+}
+
+static bool decode_toaddr_callback (pb_istream_t *stream, const pb_field_t *field, void **arg)
+{
+	UNUSED(arg);
+	uint8_t buf[PUB_ADDR_BYTES_LEN];
+	char buf2[BECH32_ENCODE_BUF_LEN];
 
 	CHECK_CANARY;
 
-  int readlen;
-	const char* tagread;
-	switch (field->tag) {
-	case ProtoTransactionCoreInfo_toaddr_tag:
-		PRINTF("decode_callback: toaddr\n");
-		readlen = PUB_ADDR_BYTES_LEN;
-		tagread = "sendto: ";
-		break;
-	case ByteArray_data_tag:
-		switch ((int) *arg) {
-		case ProtoTransactionCoreInfo_amount_tag:
-			PRINTF("decode_callback: amount\n");
-			readlen = ZIL_AMOUNT_GASPRICE_BYTES;
-			tagread = "amount(ZIL): ";
-			break;
-		case ProtoTransactionCoreInfo_gasprice_tag:
-			PRINTF("decode_callback: gasprice\n");
-			readlen = ZIL_AMOUNT_GASPRICE_BYTES;
-			tagread = "gasprice(ZIL): ";
-			break;
-		default:
-			PRINTF("decode_callback: arg: %d\n", (int) *arg);
-			readlen = 0;
-			tagread = "";
-			FAIL("Unhandled ByteArray tag.");
-		}
-		break;
-	default:
-		PRINTF("decode_callback: %d\n", field->tag);
-		readlen = 0;
-		tagread = "";
-		FAIL("Unhandled transaction element.");
+	if (field->tag != ProtoTransactionCoreInfo_toaddr_tag) {
+		FAIL("Unexpected data");
 	}
 
-	if (pb_read(stream, (pb_byte_t*) buf, readlen)) {
+	if (pb_read(stream, (pb_byte_t*) buf, PUB_ADDR_BYTES_LEN)) {
 		CHECK_CANARY;
-		PRINTF("decoded bytes: 0x%.*h\n", readlen, buf);
+		PRINTF("decoded bytes: 0x%.*h\n", PUB_ADDR_BYTES_LEN, buf);
 		// Write data for display.
-		append_ctx_msg(ctx, tagread, strlen(tagread));
-		if (readlen == PUB_ADDR_BYTES_LEN) {
-			if (!bech32_addr_encode(buf2, "zil", (uint8_t*) buf, PUB_ADDR_BYTES_LEN)) {
-				FAIL ("bech32 encoding of sendto address failed");
-			}
-			CHECK_CANARY;
-			if (strlen(buf2) != BECH32_ADDRSTR_LEN) {
-				FAIL ("bech32 encoded address of incorrect length");
-			}
-			append_ctx_msg(ctx, buf2, BECH32_ADDRSTR_LEN);
-		} else {
-			assert(readlen == ZIL_AMOUNT_GASPRICE_BYTES);
-			// It is either gasprice or amount. a uint128_t value.
-			// Convert to decimal, appending a '\0'.
-			// ZIL data is big-endian, we need little-endian here.
-			for (int i = 0; i < 4; i++) {
-				// The upper 64b and lower 64b themselves aren't swapped, just within them.
-				// Upper uint64 is converted to little endian.
-				uint8_t t = buf[i];
-				buf[i] = buf[7-i];
-				buf[7-i] = t;
-				// lower uint64 is converted to little endian.
-				t = buf[8+i];
-				buf[8+i] = buf[15-i];
-				buf[15-i] = t;
-			}
-			CHECK_CANARY;
-			// UINT128 can have a maximum of 39 decimal digits. When we convert
-			// "Qa" values to "Zil", we may have to append "0." at the start.
-			// So a total of 39 + 2 + '\0' = 42.
-			if (tostring128((uint128_t*)buf, 10, buf2, buf2size)) {
-				PRINTF("128b to decimal converted value: %s\n", buf2);
-				CHECK_CANARY;
-				qa_to_zil(buf2, buf, bufsize);
-				PRINTF("Qa converted to Zil: %s\n", buf);
-				append_ctx_msg(ctx, buf, strlen(buf));
-				CHECK_CANARY;
-			} else {
-				FAIL("Error converting 128b unsigned to decimal");
-			}
+		if (!bech32_addr_encode(buf2, "zil", buf, PUB_ADDR_BYTES_LEN)) {
+			FAIL ("bech32 encoding of sendto address failed");
 		}
 		CHECK_CANARY;
-		append_ctx_msg(ctx, " ", 1);
-		PRINTF("pb_read: read %d bytes\n", readlen);
+		if (strlen(buf2) != BECH32_ADDRSTR_LEN) {
+			FAIL ("bech32 encoded address of incorrect length");
+		}
+		assert(sizeof(ctx->toAddrStr) >= BECH32_ADDRSTR_LEN + 1);
+		memcpy(ctx->toAddrStr, buf2, BECH32_ADDRSTR_LEN);
+		ctx->toAddrStr[BECH32_ADDRSTR_LEN] = '\0';
+		CHECK_CANARY;
 	} else {
 		PRINTF("pb_read failed\n");
 		return false;
@@ -437,20 +366,89 @@ static bool decode_callback (pb_istream_t *stream, const pb_field_t *field, void
 	CHECK_CANARY;
 	return true;
 }
+
+static bool decode_amount_gasprice_callback (pb_istream_t *stream, const pb_field_t *field, void **arg)
+{
+	uint8_t buf[ZIL_AMOUNT_GASPRICE_BYTES];
+	char buf2[ZIL_UINT128_BUF_LEN];
+
+	CHECK_CANARY;
+
+	if (field->tag != ByteArray_data_tag) {
+		FAIL("Unexpected data");
+	}
+
+	if (((int) *arg != ProtoTransactionCoreInfo_amount_tag) &&
+	    ((int) *arg != ProtoTransactionCoreInfo_gasprice_tag)) {
+		FAIL("Unhandled ByteArray tag");
+	}
+
+	if (pb_read(stream, (pb_byte_t*) buf, ZIL_AMOUNT_GASPRICE_BYTES)) {
+		CHECK_CANARY;
+		PRINTF("decoded bytes: 0x%.*h\n", ZIL_AMOUNT_GASPRICE_BYTES, buf);
+		// Write data for display.
+		// It is either gasprice or amount. a uint128_t value.
+		// Convert to decimal, appending a '\0'.
+		// ZIL data is big-endian, we need little-endian here.
+		for (int i = 0; i < 4; i++) {
+			// The upper 64b and lower 64b themselves aren't swapped, just within them.
+			// Upper uint64 is converted to little endian.
+			uint8_t t = buf[i];
+			buf[i] = buf[7-i];
+			buf[7-i] = t;
+			// lower uint64 is converted to little endian.
+			t = buf[8+i];
+			buf[8+i] = buf[15-i];
+			buf[15-i] = t;
+		}
+		CHECK_CANARY;
+		// UINT128 can have a maximum of 39 decimal digits. When we convert
+		// "Qa" values to "Zil", we may have to append "0." at the start.
+		// So a total of 39 + 2 + '\0' = 42.
+		if (tostring128((uint128_t*)buf, 10, buf2, sizeof(buf2))) {
+			PRINTF("128b to decimal converted value: %s\n", buf2);
+			CHECK_CANARY;
+			if ((int) *arg == ProtoTransactionCoreInfo_amount_tag) {
+				qa_to_zil(buf2, ctx->amountStr, sizeof(ctx->amountStr));
+				strlcat(ctx->amountStr, " ZIL", sizeof(ctx->amountStr));
+				PRINTF("Amount Qa converted to Zil: %s\n", ctx->amountStr);
+			} else {
+				qa_to_zil(buf2, ctx->gaspriceStr, sizeof(ctx->gaspriceStr));
+				strlcat(ctx->gaspriceStr, " ZIL", sizeof(ctx->gaspriceStr));
+				PRINTF("Gasprice Qa converted to Zil: %s\n", ctx->gaspriceStr);
+			}
+			CHECK_CANARY;
+		} else {
+			FAIL("Error converting 128b unsigned to decimal");
+		}
+		CHECK_CANARY;
+	} else {
+		PRINTF("pb_read failed\n");
+		return false;
+	}
+
+	CHECK_CANARY;
+	return true;
+}
+
 // Sign the txn, also deserializes parts of it. May call io_exchange multiple times.
 // Output: 1. Display message will be populated in ctx->msg.
 //         2. Signature will be populated in ctx->signature.
 static bool sign_deserialize_stream(const uint8_t *txn1, int txn1Len, int hostBytesLeft)
 {
 	// Initialize stream data.
-	os_memcpy(ctx->sd.buf, txn1, txn1Len);
+	memcpy(ctx->sd.buf, txn1, txn1Len);
 	ctx->sd.nextIdx = 0; ctx->sd.len = txn1Len; ctx->sd.hostBytesLeft = hostBytesLeft;
 	assert(hostBytesLeft <= ZIL_MAX_TXN_SIZE - txn1Len);
   // Setup the stream.
 	pb_istream_t stream = { istream_callback, &ctx->sd, hostBytesLeft + txn1Len, NULL };
 
-	// Initialize the display message.
-	ctx->msgLen = 0;
+	// Initialize the display messages.
+	ctx->toAddrStr[0] = '\0';
+	ctx->amountStr[0] = '\0';
+	ctx->gaspriceStr[0] = '\0';
+	ctx->codeStr[0] = '\0';
+	ctx->dataStr[0] = '\0';
 
 	CHECK_CANARY;
 	// Initialize schnorr signing, continue with what we have so far.
@@ -460,17 +458,18 @@ static bool sign_deserialize_stream(const uint8_t *txn1, int txn1Len, int hostBy
 	CHECK_CANARY;
 
 	// Initialize protobuf Txn structs.
-	os_memset(&ctx->txn, 0, sizeof(ctx->txn));
+	memset(&ctx->txn, 0, sizeof(ctx->txn));
 	// Set callbacks for handling the fields that what we need.
-	ctx->txn.toaddr.funcs.decode = decode_callback;
+	ctx->txn.toaddr.funcs.decode = decode_toaddr_callback;
 	// Since we're using the same callback for amount and gasprice,
 	// but the tag for both will be set to "ByteArray", we differentiate with "arg".
-	ctx->txn.amount.data.funcs.decode = decode_callback;
+	ctx->txn.amount.data.funcs.decode = decode_amount_gasprice_callback;
 	ctx->txn.amount.data.arg = (void*)ProtoTransactionCoreInfo_amount_tag;
-	ctx->txn.gasprice.data.funcs.decode = decode_callback;
+	ctx->txn.gasprice.data.funcs.decode = decode_amount_gasprice_callback;
 	ctx->txn.gasprice.data.arg = (void*)ProtoTransactionCoreInfo_gasprice_tag;
-	// Set a decoder for the data field of our transaction.
-	ctx->txn.data.funcs.decode = decode_txn_data;
+	// Set a decoder for the data and code fields of our transaction.
+	ctx->txn.data.funcs.decode = decode_data_callback;
+	ctx->txn.code.funcs.decode = decode_code_callback;
 
 	CHECK_CANARY;
 
@@ -489,7 +488,9 @@ static bool sign_deserialize_stream(const uint8_t *txn1, int txn1Len, int hostBy
 }
 
 void handleSignTxn(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t dataLength, volatile unsigned int *flags, volatile unsigned int *tx) {
-
+	UNUSED(p1);
+	UNUSED(p2);
+	UNUSED(tx);
 	int txnLen, hostBytesLeft;
 
 	static const int dataIndexOffset = 0;      // offset for the key index to use
@@ -497,16 +498,22 @@ void handleSignTxn(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t dataLen
 	static const int dataTxnLenOffset = 8;     // offset for integer containing length of current txn
 	static const int dataOffset = 12;          // offset for actual transaction data.
 
+	// Sanity-check the command length
+	if (dataLength < sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint32_t)) {
+		THROW(SW_WRONG_DATA_LENGTH);
+	}
+
   // Read the various integers at the beginning.
 	ctx->keyIndex = U4LE(dataBuffer, dataIndexOffset);
-	// Generate a string for the index.
-	prepareIndexStr();
 
 	PRINTF("handleSignTxn: keyIndex: %d \n", ctx->keyIndex);
 	hostBytesLeft = U4LE(dataBuffer, dataHostBytesLeftOffset);
 	PRINTF("handleSignTxn: hostBytesLeft: %d \n", hostBytesLeft);
 	txnLen = U4LE(dataBuffer, dataTxnLenOffset);
 	PRINTF("handleSignTxn: txnLen: %d\n", txnLen);
+	if (dataLength != dataOffset + txnLen) {
+		THROW(SW_WRONG_DATA_LENGTH);
+	}
 	if (txnLen > TXN_BUF_SIZE) {
 		FAIL("Cannot handle large data sent from host");
 	}
@@ -517,30 +524,8 @@ void handleSignTxn(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t dataLen
 	if (!sign_deserialize_stream(dataBuffer + dataOffset, txnLen, hostBytesLeft)) {
 		FAIL("sign_deserialize_stream failed");
 	}
-	PRINTF("msg:    %.*H \n", ctx->msgLen, ctx->msg);
 
-#ifdef HAVE_UX_FLOW
-	// Ensure we have one byte for '\0'
-	assert(sizeof(ctx->msg) >= TXN_DISP_MSG_MAX_LEN+1);
-	assert(ctx->msgLen <= TXN_DISP_MSG_MAX_LEN);
-	ctx->msg[ctx->msgLen] = '\0';
-
-	ux_flow_init(0, ux_signmsg_flow, NULL);
-#else
-
-	// Prepare to display the comparison screen by converting the hash to hex
-	// and moving the first 12 characters into the partialMsg buffer.
-	os_memmove(ctx->partialMsg, ctx->msg, 12);
-	ctx->partialMsg[12] = '\0';
-	ctx->displayIndex = 0;
-
-	// Call UX_DISPLAY to display the comparison screen, passing the
-	// corresponding preprocessor. You might ask: Why doesn't UX_DISPLAY
-	// also take the button handler as an argument, instead of using macro
-	// magic? To which I can only reply: ¯\_(ツ)_/¯
-	UX_DISPLAY(ui_signHash_compare, ui_prepro_signHash_compare);
-
-#endif // HAVE_UX_FLOW
+	ui_display_sign_txn_flow();
 
 	// Set the IO_ASYNC_REPLY flag. This flag tells zil_main that we aren't
 	// sending data to the computer immediately; we need to wait for a button

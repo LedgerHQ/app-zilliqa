@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include "schnorr.h"
 #include "zilliqa.h"
 
@@ -87,12 +89,12 @@ void zil_ecschnorr_sign_init
   unsigned char nonce[size+8];
   cx_rng(nonce, size+8);
   cx_math_modm(nonce, size+8, (unsigned WIDE char *) PIC(domain->n), size);
-  os_memcpy(T->K, nonce, size);
+  memcpy(T->K, nonce, size);
 
   //sign
   U.Q[0] = 4;
-  os_memmove(U.Q+1,      domain->Gx,size);
-  os_memmove(U.Q+1+size, domain->Gy,size);
+  memmove(U.Q+1,      domain->Gx,size);
+  memmove(U.Q+1+size, domain->Gy,size);
   cx_ecfp_scalar_mult(domain->curve, U.Q, Q_LEN, T->K, size);
 
   if ((U.Q[2*size]&1) == 1) {
@@ -100,7 +102,7 @@ void zil_ecschnorr_sign_init
   } else {
     R[0] = 0x02;
   }
-  os_memmove(R+1, U.Q+1, size),
+  memmove(R+1, U.Q+1, size),
   cx_ecfp_generate_pair2(domain->curve, &U.pub_key, (cx_ecfp_private_key_t *)pv_key, 1, CX_NONE);
   if ((U.pub_key.W[2*size]&1) == 1) {
     U.pub_key.W[0] = 0x03;
@@ -125,6 +127,7 @@ int zil_ecschnorr_sign_finish(
   zil_ecschnorr_t *T, const cx_ecfp_private_key_t *pv_key,
   unsigned char *sig, unsigned int sig_len)
 {
+  UNUSED(sig_len);
   cx_curve_weierstrass_t WIDE const *domain = &C_cx_secp256k1;
   unsigned int size = domain->length;
   unsigned char R[32];
@@ -143,11 +146,11 @@ int zil_ecschnorr_sign_finish(
   }
 
   // Clear for security reasons.
-  os_memset(T->K, 0, size);
+  explicit_bzero(T->K, size);
 
   // Move the (r,s) signature to the destination.
-  os_memmove (sig, R, size);
-  os_memmove (sig+size, S, size);
+  memmove (sig, R, size);
+  memmove (sig+size, S, size);
 
   return 1;
 }
